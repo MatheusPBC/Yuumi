@@ -1,4 +1,5 @@
 local marks = require("yuumi.marks")
+local persist = require("yuumi.persist")
 local state = require("yuumi.state")
 local ui = require("yuumi.ui")
 local util = require("yuumi.util")
@@ -95,6 +96,7 @@ function M.mark_status(status)
 
   anchor.status = status
   state.cursor = position
+  persist.save()
   marks.render_all_loaded_buffers()
   util.notify(string.format("Marked %s as %s", anchor.id or task.id or "anchor", status))
 end

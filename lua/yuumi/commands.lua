@@ -61,10 +61,7 @@ function M.create()
   end, { desc = "Mark current Yuumi anchor as skipped", force = true })
 
   vim.api.nvim_create_user_command("YuumiAcceptInline", function()
-    local suffix = inline.accept()
-    if suffix ~= "" then
-      vim.api.nvim_put({ suffix }, "c", true, true)
-    end
+    inline.accept_current()
   end, { desc = "Accept current Yuumi inline suggestion", force = true })
 
   vim.api.nvim_create_user_command("YuumiExplain", gpt.explain, { desc = "Explain current Yuumi anchor", force = true })

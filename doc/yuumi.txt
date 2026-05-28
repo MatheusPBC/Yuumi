@@ -68,6 +68,7 @@ COMMANDS                                                *yuumi-commands*
                                                         *:YuumiAcceptInline*
 :YuumiAcceptInline
   Accept the current deterministic inline suggestion.
+  By default the same action is mapped to <M-y> in insert mode.
 
 GPT MOCK COMMANDS                                   *yuumi-gpt-commands*
 
@@ -119,8 +120,10 @@ Default setup:
 >
   require("yuumi").setup({
     plan_path = ".agent/current-plan.json",
+    state_path = ".agent/yuumi-state.json",
     highlight_group = "YuumiAnchor",
     virtual_text_prefix = "yuumi: ",
+    accept_keymap = "<M-y>",
   })
 <
 

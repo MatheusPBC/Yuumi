@@ -1,4 +1,5 @@
 local config = require("yuumi.config")
+local persist = require("yuumi.persist")
 local state = require("yuumi.state")
 local util = require("yuumi.util")
 
@@ -83,6 +84,7 @@ function M.load(path)
   state.plan_path = plan_path
   state.cursor = { task = 1, anchor = 0 }
   state.index_tasks()
+  persist.load()
 
   util.notify(string.format("Loaded %d task(s) from %s", #decoded.tasks, plan_path))
   return true

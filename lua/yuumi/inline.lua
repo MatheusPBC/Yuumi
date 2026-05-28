@@ -6,7 +6,8 @@ local M = {}
 local function line_prefix()
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   local line = vim.api.nvim_get_current_line()
-  return line:sub(1, col), row - 1, col
+  local prefix_end = math.min(col + 1, #line)
+  return line:sub(1, prefix_end), row - 1, prefix_end
 end
 
 local function find_suggestion(anchor, prefix)
@@ -72,6 +73,19 @@ function M.accept()
   local suffix = suggestion.insertText:sub(trigger_len + 1)
   M.clear(inline.bufnr)
   return suffix
+end
+
+function M.accept_current()
+  local inline = state.inline
+  if not inline or inline.bufnr ~= vim.api.nvim_get_current_buf() then
+    return false
+  end
+
+  local suggestion = inline.suggestion
+  local suffix = suggestion.insertText:sub(#suggestion.trigger + 1)
+  M.clear(inline.bufnr)
+  vim.api.nvim_buf_set_text(inline.bufnr, inline.row, inline.col, inline.row, inline.col, { suffix })
+  return true
 end
 
 return M
