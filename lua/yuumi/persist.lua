@@ -22,6 +22,8 @@ local function encode_state()
   return {
     version = 1,
     plan = state.plan and state.plan.title or nil,
+    plan_path = state.plan_path,
+    cursor = state.cursor,
     anchors = anchors,
   }
 end
@@ -77,6 +79,28 @@ function M.load()
       end
     end
   end
+
+  if type(decoded.cursor) == "table" then
+    state.cursor = decoded.cursor
+  end
+end
+
+function M.read_session()
+  if not vim.uv.fs_stat(util.resolve_path(config.options.state_path)) then
+    return nil
+  end
+
+  local content = util.read_file(config.options.state_path)
+  if not content then
+    return nil
+  end
+
+  local ok, decoded = pcall(vim.json.decode, content)
+  if not ok then
+    return nil
+  end
+
+  return decoded
 end
 
 function M.reset()

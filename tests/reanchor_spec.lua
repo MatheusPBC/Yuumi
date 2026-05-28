@@ -13,4 +13,29 @@ minit.test("reanchors by anchorText in current buffer", function()
   minit.truthy(reanchor.anchor_in_buffer(0, anchor))
   minit.eq(2, anchor.line)
   minit.eq(2, anchor.endLine)
+  vim.cmd("enew!")
+end)
+
+minit.test("reanchors duplicate anchorText using surrounding context", function()
+  local anchor = {
+    line = 1,
+    endLine = 1,
+    anchorText = "target_call()",
+    beforeText = "wanted_before()",
+    afterText = "wanted_after()",
+  }
+
+  vim.cmd("enew!")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+    "other_before()",
+    "target_call()",
+    "other_after()",
+    "wanted_before()",
+    "target_call()",
+    "wanted_after()",
+  })
+
+  minit.truthy(reanchor.anchor_in_buffer(0, anchor))
+  minit.eq(5, anchor.line)
+  vim.cmd("enew!")
 end)

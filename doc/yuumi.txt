@@ -81,10 +81,26 @@ COMMANDS                                                *yuumi-commands*
   Accept the current deterministic inline suggestion.
   By default the same action is mapped to <M-y> in insert mode.
 
+BLINK.CMP SOURCE                                      *yuumi-blink*
+
+Yuumi exposes a blink.cmp source at module yuumi.blink. Add it as a provider:
+>
+  sources = {
+    default = { "lsp", "path", "snippets", "buffer", "yuumi" },
+    providers = {
+      yuumi = { name = "Yuumi", module = "yuumi.blink" },
+    },
+  }
+<
+
+The source returns inlineSuggestions from the loaded plan for the current file.
+
 GPT COMMANDS                                        *yuumi-gpt-commands*
 
 These commands use a configured command adapter when gpt_command is set.
 The command receives a JSON payload on stdin and should write text to stdout.
+Yuumi does not store API keys. Keep provider credentials in environment
+variables such as OPENAI_API_KEY or delegate to OpenCode/local wrappers.
 >
   :YuumiExplain
   :YuumiSuggest

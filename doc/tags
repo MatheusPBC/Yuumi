@@ -10,6 +10,7 @@
 :YuumiSkip	yuumi.txt	/*:YuumiSkip*
 :YuumiStatus	yuumi.txt	/*:YuumiStatus*
 yuumi	yuumi.txt	/*yuumi*
+yuumi-blink	yuumi.txt	/*yuumi-blink*
 yuumi-commands	yuumi.txt	/*yuumi-commands*
 yuumi-configuration	yuumi.txt	/*yuumi-configuration*
 yuumi-gpt-commands	yuumi.txt	/*yuumi-gpt-commands*

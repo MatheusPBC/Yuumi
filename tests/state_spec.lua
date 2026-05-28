@@ -2,11 +2,10 @@ local minit = require("tests.minit")
 local plan = require("yuumi.plan")
 local nav = require("yuumi.nav")
 local state = require("yuumi.state")
-
-local state_path = ".agent/yuumi-state.json"
+local config = require("yuumi.config")
 
 local function cleanup()
-  os.remove(state_path)
+  os.remove(config.options.state_path)
   state.reset()
 end
 
@@ -17,7 +16,7 @@ minit.test("persists anchor status to disk", function()
   nav.next()
   nav.mark_status("done")
 
-  local file = assert(io.open(state_path, "r"))
+  local file = assert(io.open(config.options.state_path, "r"))
   local persisted = vim.json.decode(file:read("*a"))
   file:close()
 

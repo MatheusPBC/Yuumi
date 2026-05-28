@@ -146,4 +146,13 @@ function M.ensure_loaded()
   return M.load(config.options.plan_path)
 end
 
+function M.resume()
+  local session = persist.read_session()
+  if not session or not session.plan_path then
+    return false
+  end
+
+  return M.load(session.plan_path)
+end
+
 return M
