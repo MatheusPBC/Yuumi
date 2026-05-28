@@ -9,6 +9,14 @@ local function starts_with(value, prefix)
   return value:sub(1, #prefix) == prefix
 end
 
+local function split_suffix(suffix)
+  return vim.split(suffix:gsub("\r\n", "\n"):gsub("\r", "\n"), "\n", { plain = true })
+end
+
+local function normalize_suffix(suffix)
+  return suffix:gsub("\r\n", "\n"):gsub("\r", "\n")
+end
+
 local function line_prefix()
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   local line = vim.api.nvim_get_current_line()
@@ -134,7 +142,7 @@ function M.accept()
 
   local suggestion = inline.suggestion
   local typed_prefix = inline.typed_prefix or suggestion.trigger
-  local suffix = suggestion.insertText:sub(#typed_prefix + 1)
+  local suffix = normalize_suffix(suggestion.insertText:sub(#typed_prefix + 1))
   M.clear(inline.bufnr)
   return suffix
 end
@@ -147,7 +155,7 @@ function M.accept_current()
 
   local suggestion = inline.suggestion
   local typed_prefix = inline.typed_prefix or suggestion.trigger
-  local suffix = suggestion.insertText:sub(#typed_prefix + 1)
+  local suffix = normalize_suffix(suggestion.insertText:sub(#typed_prefix + 1))
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   local line = vim.api.nvim_get_current_line()
   local insert_row = row - 1
@@ -158,7 +166,7 @@ function M.accept_current()
   end
 
   M.clear(inline.bufnr)
-  vim.api.nvim_buf_set_text(inline.bufnr, insert_row, insert_col, insert_row, insert_col, { suffix })
+  vim.api.nvim_buf_set_text(inline.bufnr, insert_row, insert_col, insert_row, insert_col, split_suffix(suffix))
   return true
 end
 

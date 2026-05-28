@@ -26,11 +26,7 @@ function M.setup(opts)
 
   if config.options.accept_keymap then
     vim.keymap.set("i", config.options.accept_keymap, function()
-      if inline.accept_current() then
-        return ""
-      end
-
-      return ""
+      return inline.accept()
     end, { expr = true, desc = "Accept Yuumi inline suggestion" })
   end
 end

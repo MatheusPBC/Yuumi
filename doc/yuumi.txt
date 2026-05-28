@@ -65,6 +65,12 @@ COMMANDS                                                *yuumi-commands*
 :YuumiStatus
   Show current plan progress in memory.
 
+                                                        *:YuumiValidate*
+:YuumiValidate
+  Validate the current buffer against the active anchor's writeText. Reports
+  exact lines already present, missing planned lines, and nearby-looking lines
+  that do not exactly match.
+
                                                         *:YuumiDone*
 :YuumiDone
   Mark the current anchor as done in memory.
@@ -91,6 +97,9 @@ COMMANDS                                                *yuumi-commands*
 
 Floating popups such as :YuumiHover, :YuumiStatus, and :YuumiCheck can be closed
 by running the same command again. If the popup is focused, press q.
+
+:YuumiCheck uses the same validation path as :YuumiValidate when the current
+anchor has writeText, so it no longer shows only mock context.
 
 BLINK.CMP SOURCE                                      *yuumi-blink*
 

@@ -123,3 +123,66 @@ minit.test("uses AI inline fallback when deterministic suggestions do not match"
   config.setup({ state_path = ".agent/yuumi-test-state.json" })
   cleanup()
 end)
+
+minit.test("accepts multiline AI inline fallback without nvim_buf_set_text errors", function()
+  cleanup()
+
+  config.setup({
+    state_path = ".agent/yuumi-test-state.json",
+    inline_ai_enabled = true,
+    gpt_command = { "sh", "-c", "printf ' first\\nsecond'" },
+  })
+  minit.truthy(plan.load(".agent/test-plan.json"))
+  nav.next()
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, { "custom" })
+  vim.api.nvim_win_set_cursor(0, { 1, 6 })
+  inline.refresh()
+
+  minit.truthy(state.inline)
+  minit.truthy(inline.accept_current())
+
+  minit.eq({ "custom first", "second" }, vim.api.nvim_buf_get_lines(0, 0, 2, false))
+
+  config.setup({ state_path = ".agent/yuumi-test-state.json" })
+  cleanup()
+end)
+
+minit.test("accepts carriage-return AI inline fallback without nvim_buf_set_text errors", function()
+  cleanup()
+
+  config.setup({
+    state_path = ".agent/yuumi-test-state.json",
+    inline_ai_enabled = true,
+    gpt_command = { "sh", "-c", "printf ' first\\rsecond'" },
+  })
+  minit.truthy(plan.load(".agent/test-plan.json"))
+  nav.next()
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, { "custom" })
+  vim.api.nvim_win_set_cursor(0, { 1, 6 })
+  inline.refresh()
+
+  minit.truthy(state.inline)
+  minit.truthy(inline.accept_current())
+
+  minit.eq({ "custom first", "second" }, vim.api.nvim_buf_get_lines(0, 0, 2, false))
+
+  config.setup({ state_path = ".agent/yuumi-test-state.json" })
+  cleanup()
+end)
+
+minit.test("returns suffix for insert-mode expr mappings without editing buffer", function()
+  cleanup()
+
+  minit.truthy(plan.load(".agent/test-plan.json"))
+  nav.next()
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, { "    <meta name=\"viewport\" conte" })
+  vim.api.nvim_win_set_cursor(0, { 1, 31 })
+  inline.refresh()
+
+  local suffix = inline.accept()
+
+  minit.eq("nt=\"width=device-width, initial-scale=1.0\">", suffix)
+  minit.eq("    <meta name=\"viewport\" conte", vim.api.nvim_get_current_line())
+
+  cleanup()
+end)

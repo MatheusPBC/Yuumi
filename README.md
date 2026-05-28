@@ -42,6 +42,7 @@ Yuumi defaults to `.agent/current-plan.json`.
 | `:YuumiNext` / `:YuumiPrev` | Navigate anchors |
 | `:YuumiHover` | Show guidance for the current anchor |
 | `:YuumiStatus` | Show current plan progress |
+| `:YuumiValidate` | Validate the current buffer against anchor `writeText` |
 | `:YuumiDone` / `:YuumiSkip` | Persist anchor status |
 | `:YuumiResetState` | Clear persisted state |
 | `:YuumiReanchor` | Re-locate anchors using plan text context |
@@ -144,6 +145,18 @@ Yuumi inline guidance tries sources in this order:
 For AI fallback, Yuumi sends an `InlineSuggest` payload with file, cursor line,
 current prefix, nearby lines, guidance, and `writeText`. The command should
 return only the text suffix to insert at the cursor.
+
+## Validation
+
+`:YuumiValidate` compares the current buffer with the active anchor's
+`writeText` and reports:
+
+- `OK`: exact planned lines already present
+- `Missing`: planned lines not found
+- `Different`: nearby-looking lines that do not exactly match
+
+`:YuumiCheck` uses the same validation path, so it is no longer a mock-only
+popup when the anchor has `writeText`.
 
 ## blink.cmp
 

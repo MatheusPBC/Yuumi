@@ -7,6 +7,7 @@ local persist = require("yuumi.persist")
 local plan = require("yuumi.plan")
 local reanchor = require("yuumi.reanchor")
 local ui = require("yuumi.ui")
+local validate = require("yuumi.validate")
 
 local M = {}
 
@@ -61,6 +62,12 @@ function M.create()
     end
   end, { desc = "Show Yuumi plan status", force = true })
 
+  vim.api.nvim_create_user_command("YuumiValidate", function()
+    if plan.ensure_loaded() then
+      validate.show()
+    end
+  end, { desc = "Validate current edit against Yuumi writeText", force = true })
+
   vim.api.nvim_create_user_command("YuumiBoard", function()
     board.open()
   end, { desc = "Show Yuumi guidance board", force = true })
@@ -84,7 +91,11 @@ function M.create()
 
   vim.api.nvim_create_user_command("YuumiExplain", gpt.explain, { desc = "Explain current Yuumi anchor", force = true })
   vim.api.nvim_create_user_command("YuumiSuggest", gpt.suggest, { desc = "Suggest an alternative for current Yuumi anchor", force = true })
-  vim.api.nvim_create_user_command("YuumiCheck", gpt.check, { desc = "Check current edit against Yuumi anchor", force = true })
+  vim.api.nvim_create_user_command("YuumiCheck", function()
+    if plan.ensure_loaded() then
+      validate.show()
+    end
+  end, { desc = "Check current edit against Yuumi anchor", force = true })
   vim.api.nvim_create_user_command("YuumiReanchor", function()
     if reanchor.current_buffer() then
       marks.render_buffer(0)

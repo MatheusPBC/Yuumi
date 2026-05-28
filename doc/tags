@@ -10,6 +10,7 @@
 :YuumiResetState	yuumi.txt	/*:YuumiResetState*
 :YuumiSkip	yuumi.txt	/*:YuumiSkip*
 :YuumiStatus	yuumi.txt	/*:YuumiStatus*
+:YuumiValidate	yuumi.txt	/*:YuumiValidate*
 yuumi	yuumi.txt	/*yuumi*
 yuumi-blink	yuumi.txt	/*yuumi-blink*
 yuumi-commands	yuumi.txt	/*yuumi-commands*
