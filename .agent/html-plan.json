@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "title": "Yuumi HTML page smoke test",
+  "tasks": [
+    {
+      "id": "html-page-structure",
+      "file": "examples/index.html",
+      "status": "pending",
+      "summary": "Criar um HTML completo e simples",
+      "anchors": [
+        {
+          "id": "doctype-and-head",
+          "line": 1,
+          "endLine": 18,
+          "kind": "manual-edit",
+          "reason": "Cria a base do documento para testar orientacao linha a linha no YuumiBoard.",
+          "guidance": "Escreva este bloco no inicio do arquivo, a partir da linha 1.",
+          "writeText": [
+            "<!doctype html>",
+            "<html lang=\"pt-BR\">",
+            "  <head>",
+            "    <meta charset=\"UTF-8\">",
+            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">",
+            "    <title>Yuumi Test Page</title>",
+            "    <style>",
+            "      * { box-sizing: border-box; }",
+            "      body { margin: 0; font-family: Arial, sans-serif; background: #f6f3ed; color: #1f2933; }",
+            "      .site-header, .site-footer { padding: 24px; background: #1f2933; color: white; }",
+            "      main { max-width: 960px; margin: 0 auto; padding: 48px 24px; }",
+            "      .hero { padding: 40px; border-radius: 20px; background: white; box-shadow: 0 18px 40px rgba(31, 41, 51, 0.12); }",
+            "      .hero a { display: inline-block; margin-top: 16px; padding: 12px 18px; border-radius: 999px; background: #d97706; color: white; text-decoration: none; }",
+            "      .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }",
+            "      .card { padding: 20px; border-radius: 16px; background: white; border: 1px solid #e5e0d8; }",
+            "    </style>",
+            "  </head>"
+          ],
+          "doneWhen": [
+            "O arquivo comeca com <!doctype html>",
+            "A tag html usa lang=\"pt-BR\"",
+            "O head tem meta charset, viewport, title e style"
+          ],
+          "inlineSuggestions": [
+            {
+              "trigger": "<!",
+              "insertText": "<!doctype html>"
+            },
+            {
+              "trigger": "<html",
+              "insertText": "<html lang=\"pt-BR\">"
+            }
+          ]
+        },
+        {
+          "id": "body-and-hero",
+          "line": 19,
+          "endLine": 39,
+          "kind": "manual-edit",
+          "reason": "Adiciona a estrutura principal visivel da pagina.",
+          "guidance": "Depois do </head>, escreva este bloco para montar body, header e hero.",
+          "writeText": [
+            "  <body>",
+            "    <header class=\"site-header\">",
+            "      <strong>Yuumi</strong>",
+            "      <p>Plano guiado para escrever codigo com menos adivinhacao.</p>",
+            "    </header>",
+            "",
+            "    <main>",
+            "      <section class=\"hero\">",
+            "        <p>Teste manual</p>",
+            "        <h1>Construa uma pagina simples seguindo o board.</h1>",
+            "        <p>O objetivo e validar se o Yuumi mostra o bloco completo, a regiao certa e os criterios de conclusao.</p>",
+            "        <a href=\"#recursos\">Ver recursos</a>",
+            "      </section>"
+          ],
+          "doneWhen": [
+            "Existe body aberto apos o head",
+            "Existe header com nome Yuumi e descricao curta",
+            "Existe section.hero com h1, paragrafo e link"
+          ],
+          "inlineSuggestions": [
+            {
+              "trigger": "<body",
+              "insertText": "<body>"
+            },
+            {
+              "trigger": "<header",
+              "insertText": "<header class=\"site-header\">"
+            }
+          ]
+        },
+        {
+          "id": "cards-and-footer",
+          "line": 40,
+          "endLine": 72,
+          "kind": "manual-edit",
+          "reason": "Finaliza a pagina com conteudo simples e fechamento de tags.",
+          "guidance": "Abaixo da hero, escreva este bloco para adicionar cards, footer e fechar o HTML.",
+          "writeText": [
+            "",
+            "      <section id=\"recursos\" class=\"cards\" aria-label=\"Recursos\">",
+            "        <article class=\"card\">",
+            "          <h2>Rapido</h2>",
+            "          <p>O plano mostra exatamente o que escrever.</p>",
+            "        </article>",
+            "        <article class=\"card\">",
+            "          <h2>Guiado</h2>",
+            "          <p>Cada bloco tem linha, contexto e checklist.</p>",
+            "        </article>",
+            "        <article class=\"card\">",
+            "          <h2>Manual</h2>",
+            "          <p>Voce continua no controle do codigo final.</p>",
+            "        </article>",
+            "      </section>",
+            "    </main>",
+            "",
+            "    <footer class=\"site-footer\">",
+            "      <small>Feito para testar o YuumiBoard.</small>",
+            "    </footer>",
+            "  </body>",
+            "</html>"
+          ],
+          "doneWhen": [
+            "Existe section#recursos com tres article.card",
+            "Cada card possui titulo e paragrafo",
+            "main, body e html foram fechados corretamente"
+          ],
+          "inlineSuggestions": [
+            {
+              "trigger": "<section",
+              "insertText": "<section id=\"recursos\" class=\"cards\" aria-label=\"Recursos\">"
+            },
+            {
+              "trigger": "<footer",
+              "insertText": "<footer class=\"site-footer\">"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

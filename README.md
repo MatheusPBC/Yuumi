@@ -57,6 +57,19 @@ Local development setup:
 :YuumiNext
 ```
 
+This repository includes two sample plans you can alternate between:
+
+```vim
+:YuumiLoad .agent/current-plan.json
+:YuumiLoad .agent/html-plan.json
+:YuumiPlans
+```
+
+`current-plan.json` targets `examples/sample.lua`. `html-plan.json` targets
+`examples/index.html`. `:YuumiPlans` opens a picker for plan files in `.agent`.
+`:YuumiFiles` does not load a new plan; it only lists anchors from the plan that
+is already loaded.
+
 Then edit the highlighted region manually. If ghost text appears, accept it in
 insert mode with `<M-y>`.
 
@@ -82,6 +95,7 @@ To check your progress:
 | Command | Purpose |
 | --- | --- |
 | `:YuumiLoad [path]` | Load a plan JSON file. Defaults to `.agent/current-plan.json`. |
+| `:YuumiPlans` | Pick and load a plan JSON from `.agent`. |
 | `:YuumiFiles` | Pick a task/anchor with `vim.ui.select`. |
 | `:YuumiNext` / `:YuumiPrev` | Navigate through anchors. |
 | `:YuumiBoard` | Show the right-side guidance board. |
@@ -106,6 +120,7 @@ focused, press `q`.
 ```lua
 keys = {
   { "<leader>yl", "<cmd>YuumiLoad<cr>", desc = "Yuumi Load Plan" },
+  { "<leader>yP", "<cmd>YuumiPlans<cr>", desc = "Yuumi Plans" },
   { "<leader>yf", "<cmd>YuumiFiles<cr>", desc = "Yuumi Files" },
   { "<leader>yn", "<cmd>YuumiNext<cr>", desc = "Yuumi Next" },
   { "<leader>yp", "<cmd>YuumiPrev<cr>", desc = "Yuumi Prev" },

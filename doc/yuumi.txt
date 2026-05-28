@@ -39,6 +39,10 @@ COMMANDS                                                *yuumi-commands*
 :YuumiLoad [path]
   Load a Yuumi JSON plan. Defaults to .agent/current-plan.json.
 
+                                                        *:YuumiPlans*
+:YuumiPlans
+  Pick and load a plan JSON from .agent. This switches the active plan.
+
                                                         *:YuumiBoard*
 :YuumiBoard
   Show a floating guidance board on the right side of the editor. The board

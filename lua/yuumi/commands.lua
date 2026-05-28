@@ -5,6 +5,7 @@ local marks = require("yuumi.marks")
 local nav = require("yuumi.nav")
 local persist = require("yuumi.persist")
 local plan = require("yuumi.plan")
+local plans = require("yuumi.plans")
 local reanchor = require("yuumi.reanchor")
 local ui = require("yuumi.ui")
 local validate = require("yuumi.validate")
@@ -36,6 +37,12 @@ function M.create()
       nav.files()
     end
   end, { desc = "List Yuumi files and anchors", force = true })
+
+  vim.api.nvim_create_user_command("YuumiPlans", function()
+    plans.select(function(path)
+      M.load({ args = path })
+    end)
+  end, { desc = "Pick and load a Yuumi plan", force = true })
 
   vim.api.nvim_create_user_command("YuumiNext", function()
     if plan.ensure_loaded() then
