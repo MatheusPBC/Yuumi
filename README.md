@@ -2,10 +2,22 @@
 
 Yuumi is a plan-guided pair programming layer for Neovim.
 
-It does not generate plans and does not edit files by itself. OpenCode or any
-external agent writes `.agent/current-plan.json`; Yuumi turns that plan into
-navigation, marks, hover guidance, a right-side guidance board, deterministic
-inline hints, and optional completion items.
+It does not generate plans and does not auto-apply patches. An external agent,
+such as OpenCode, writes a JSON plan. Yuumi turns that plan into navigation,
+buffer marks, a right-side guidance board, inline ghost text, validation, and
+optional AI fallback through an external CLI.
+
+## What It Does
+
+- Loads `.agent/current-plan.json` or any JSON plan path.
+- Marks planned edit regions in the target buffers.
+- Shows a right-side board with files, anchors, instructions, `writeText`, and
+  done criteria.
+- Suggests ghost text from `writeText` without requiring exact trigger words.
+- Falls back to deterministic `inlineSuggestions` when configured.
+- Optionally calls an external AI command for inline suggestions.
+- Validates the current buffer against the active anchor's `writeText`.
+- Persists anchor status, last plan path, and current cursor.
 
 ## Install
 
@@ -20,50 +32,92 @@ With lazy.nvim:
 }
 ```
 
+Local development setup:
+
+```lua
+{
+  "MatheusPBC/Yuumi",
+  dir = "/home/matheus/Documentos/vscode/Yuumi",
+  config = function()
+    require("yuumi").setup({
+      inline_ai_enabled = true,
+      gpt_command = {
+        "/home/matheus/Documentos/vscode/Yuumi/scripts/yuumi-codex-inline",
+      },
+    })
+  end,
+}
+```
+
 ## Quick Start
 
 ```vim
-:YuumiLoad
+:YuumiLoad .agent/test-plan.json
 :YuumiBoard
-:YuumiFiles
 :YuumiNext
-:YuumiHover
 ```
 
-Yuumi defaults to `.agent/current-plan.json`.
+Then edit the highlighted region manually. If ghost text appears, accept it in
+insert mode with `<M-y>`.
+
+To check your progress:
+
+```vim
+:YuumiValidate
+```
+
+## Workflow
+
+1. Generate or write a plan JSON.
+2. Run `:YuumiLoad [path]`.
+3. Pick an anchor from the picker or navigate with `:YuumiNext`.
+4. Read the right-side `:YuumiBoard`.
+5. Type the requested code manually.
+6. Accept ghost text with `<M-y>` when useful.
+7. Run `:YuumiValidate` or `:YuumiCheck`.
+8. Mark completed anchors with `:YuumiDone`.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `:YuumiLoad [path]` | Load a plan JSON file |
-| `:YuumiBoard` | Show the right-side guidance board |
-| `:YuumiFiles` | Pick a task/anchor with `vim.ui.select` |
-| `:YuumiNext` / `:YuumiPrev` | Navigate anchors |
-| `:YuumiHover` | Show guidance for the current anchor |
-| `:YuumiStatus` | Show current plan progress |
-| `:YuumiValidate` | Validate the current buffer against anchor `writeText` |
-| `:YuumiDone` / `:YuumiSkip` | Persist anchor status |
-| `:YuumiResetState` | Clear persisted state |
-| `:YuumiReanchor` | Re-locate anchors using plan text context |
-| `:YuumiAcceptInline` | Accept deterministic inline hint |
+| `:YuumiLoad [path]` | Load a plan JSON file. Defaults to `.agent/current-plan.json`. |
+| `:YuumiFiles` | Pick a task/anchor with `vim.ui.select`. |
+| `:YuumiNext` / `:YuumiPrev` | Navigate through anchors. |
+| `:YuumiBoard` | Show the right-side guidance board. |
+| `:YuumiHover` | Show guidance for the current anchor. |
+| `:YuumiStatus` | Show current plan progress. |
+| `:YuumiValidate` | Validate current buffer against active anchor `writeText`. |
+| `:YuumiCheck` | Same validation path as `:YuumiValidate`. |
+| `:YuumiDone` / `:YuumiSkip` | Persist anchor status. |
+| `:YuumiResetState` | Clear persisted runtime state. |
+| `:YuumiReanchor` | Re-locate anchors using plan text context. |
+| `:YuumiAcceptInline` | Accept current inline hint from normal command mode. |
+| `:YuumiExplain` / `:YuumiSuggest` / `:YuumiBreakdown` | Optional external AI popup commands. |
 
-Default inline accept keymap: `<M-y>`.
+Default insert-mode inline accept keymap: `<M-y>`.
 
-Floating popups such as `:YuumiHover`, `:YuumiStatus`, and `:YuumiCheck` can be
-closed by running the same command again. If the popup is focused, press `q`.
+Floating popups such as `:YuumiHover`, `:YuumiStatus`, `:YuumiValidate`, and
+`:YuumiCheck` can be closed by running the same command again. If the popup is
+focused, press `q`.
 
-## Guidance Board
+## Suggested Keymaps
 
-`:YuumiBoard` opens a floating panel on the right side of the editor. It shows:
-
-- plan title
-- files and anchors
-- current anchor status
-- current guidance, removal text, and done criteria
-
-When `open_files_on_load` is enabled, `:YuumiLoad` opens the board before the
-file picker so the developer sees the plan context first.
+```lua
+keys = {
+  { "<leader>yl", "<cmd>YuumiLoad<cr>", desc = "Yuumi Load Plan" },
+  { "<leader>yf", "<cmd>YuumiFiles<cr>", desc = "Yuumi Files" },
+  { "<leader>yn", "<cmd>YuumiNext<cr>", desc = "Yuumi Next" },
+  { "<leader>yp", "<cmd>YuumiPrev<cr>", desc = "Yuumi Prev" },
+  { "<leader>yh", "<cmd>YuumiHover<cr>", desc = "Yuumi Hover" },
+  { "<leader>ys", "<cmd>YuumiStatus<cr>", desc = "Yuumi Status" },
+  { "<leader>yv", "<cmd>YuumiValidate<cr>", desc = "Yuumi Validate" },
+  { "<leader>yb", "<cmd>YuumiBoard<cr>", desc = "Yuumi Board" },
+  { "<leader>yd", "<cmd>YuumiDone<cr>", desc = "Yuumi Done" },
+  { "<leader>yk", "<cmd>YuumiSkip<cr>", desc = "Yuumi Skip" },
+  { "<leader>yr", "<cmd>YuumiReanchor<cr>", desc = "Yuumi Reanchor" },
+}
+```
 
 ## Configuration
 
@@ -85,9 +139,13 @@ require("yuumi").setup({
 })
 ```
 
-Set `virtual_text_pos` to any `nvim_buf_set_extmark()` virtual text position
-supported by your Neovim version. The default is `right_align` so guidance does
-not look like typed code.
+Notes:
+
+- `virtual_text_pos = "right_align"` keeps guidance away from code text.
+- `open_files_on_load = true` opens the board and task picker after loading.
+- `inline_ai_enabled = false` keeps AI calls off unless explicitly enabled.
+- `gpt_command` is any executable command that receives JSON on stdin and
+  returns text on stdout.
 
 ## Plan Contract
 
@@ -130,33 +188,126 @@ Minimum `.agent/current-plan.json`:
 }
 ```
 
-Use `anchorText`, `beforeText`, and `afterText` when possible. They let Yuumi
-reanchor deterministically if line numbers drift.
+Important fields:
+
+| Field | Purpose |
+| --- | --- |
+| `file` | Target file path relative to the project root. |
+| `line` / `endLine` | Planned edit region. |
+| `reason` | Why this anchor exists. |
+| `guidance` | Human-readable instruction. |
+| `writeText` | Exact planned lines shown in the board and used by inline/validation. |
+| `doneWhen` | Checklist shown in the board and hover popup. |
+| `inlineSuggestions` | Optional trigger-based deterministic hints. |
+| `anchorText` / `beforeText` / `afterText` | Deterministic reanchor hints when line numbers drift. |
+
+## Guidance Board
+
+`:YuumiBoard` opens a floating panel on the right side of the editor. It shows:
+
+- plan title
+- files and anchors
+- active anchor status
+- file and line
+- guidance
+- `Write exactly:` block from `writeText`
+- done criteria
+
+The board is meant to remove guesswork. The developer still types or accepts
+code manually.
 
 ## Inline Guidance
 
 Yuumi inline guidance tries sources in this order:
 
-- `writeText`: completes the rest of the current line or the next missing line
-  from the planned block, without requiring an exact trigger.
-- `inlineSuggestions`: deterministic trigger-based hints.
-- AI fallback: only when `inline_ai_enabled = true` and `gpt_command` is set.
+1. `writeText`: completes the rest of the current line or the next missing line
+   from the planned block without requiring an exact trigger.
+2. `inlineSuggestions`: deterministic trigger-based hints.
+3. AI fallback: only when `inline_ai_enabled = true` and `gpt_command` is set.
 
-For AI fallback, Yuumi sends an `InlineSuggest` payload with file, cursor line,
-current prefix, nearby lines, guidance, and `writeText`. The command should
-return only the text suffix to insert at the cursor.
+Examples:
+
+```html
+<meta name="viewport" conte
+```
+
+If the active anchor has this planned line:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+```
+
+Yuumi suggests only the suffix:
+
+```html
+nt="width=device-width, initial-scale=1.0">
+```
+
+On an empty line, Yuumi suggests the next missing `writeText` line.
 
 ## Validation
 
-`:YuumiValidate` compares the current buffer with the active anchor's
-`writeText` and reports:
+`:YuumiValidate` and `:YuumiCheck` compare the current buffer with the active
+anchor's `writeText` and report:
 
 - `OK`: exact planned lines already present
 - `Missing`: planned lines not found
 - `Different`: nearby-looking lines that do not exactly match
 
-`:YuumiCheck` uses the same validation path, so it is no longer a mock-only
-popup when the anchor has `writeText`.
+This is deterministic validation. It checks exact planned lines, not semantic
+equivalence.
+
+## AI Fallback
+
+Yuumi never stores provider keys and does not call OpenAI/OpenRouter directly.
+AI is delegated to `gpt_command`.
+
+If your wrapper uses API credentials, keep them outside the plugin in
+environment variables such as `OPENAI_API_KEY`. Do not commit secrets.
+
+When inline AI fallback runs, Yuumi sends an `InlineSuggest` JSON payload:
+
+```json
+{
+  "action": "InlineSuggest",
+  "file": "examples/index.html",
+  "line": 5,
+  "prefix": "<meta name=\"viewport\" conte",
+  "nearbyLines": ["..."],
+  "guidance": "Write this block at the top of the file.",
+  "writeText": ["..."]
+}
+```
+
+The command should return only the text suffix to insert at the cursor. Do not
+return Markdown or explanation.
+
+## Codex CLI OAuth Adapter
+
+If you use Codex CLI with ChatGPT/OAuth login, Yuumi can call it through the
+included wrapper:
+
+```lua
+require("yuumi").setup({
+  inline_ai_enabled = true,
+  gpt_command = {
+    "/home/matheus/Documentos/vscode/Yuumi/scripts/yuumi-codex-inline",
+  },
+})
+```
+
+The wrapper reads Yuumi's JSON payload from stdin and runs:
+
+```bash
+codex exec --sandbox read-only --ephemeral
+```
+
+It uses your existing Codex CLI OAuth session. Log in to Codex CLI before using
+it. Optionally choose a model with:
+
+```bash
+export YUUMI_CODEX_MODEL="gpt-5.2"
+```
 
 ## blink.cmp
 
@@ -176,58 +327,7 @@ require("blink.cmp").setup({
 })
 ```
 
-The source returns `inlineSuggestions` for the current file. It does not call an
-LLM.
-
-## GPT Adapter
-
-Yuumi does not store API keys and does not call OpenAI/OpenRouter directly.
-
-Instead, configure `gpt_command` as an external command. Yuumi sends a JSON
-payload to stdin and displays stdout.
-
-```lua
-require("yuumi").setup({
-  gpt_command = { "yuumi-gpt-wrapper" },
-})
-```
-
-Your wrapper can use `OPENAI_API_KEY`, OpenRouter, OpenCode, a local model, or
-any other provider outside Yuumi.
-
-Example wrapper responsibilities:
-
-```text
-stdin:  { "action": "Explain", "file": "src/example.lua", "line": 10 }
-stdout: Markdown/text response to show in a floating window
-```
-
-Keep secrets in environment variables such as `OPENAI_API_KEY`; do not commit
-them into the repository.
-
-### Codex CLI OAuth adapter
-
-If you use Codex CLI with ChatGPT/OAuth login, Yuumi can call it through the
-included wrapper:
-
-```lua
-require("yuumi").setup({
-  inline_ai_enabled = true,
-  gpt_command = {
-    "/home/matheus/Documentos/vscode/Yuumi/scripts/yuumi-codex-inline",
-  },
-})
-```
-
-The wrapper reads Yuumi's JSON payload from stdin and runs `codex exec` with a
-read-only sandbox. It does not need an API key in the plugin. Log in to Codex CLI
-with your ChatGPT/OAuth account before using it.
-
-Optionally choose a model with:
-
-```bash
-export YUUMI_CODEX_MODEL="gpt-5.2"
-```
+The source returns deterministic plan suggestions. It does not call an LLM.
 
 ## State
 
@@ -238,3 +338,17 @@ Yuumi persists local runtime state in `.agent/yuumi-state.json`:
 - current task/anchor cursor
 
 This file is ignored by Git.
+
+## Development
+
+Run the test suite:
+
+```bash
+nvim --headless -u NONE -l tests/run.lua
+```
+
+Check diff whitespace before committing:
+
+```bash
+git diff --check
+```
