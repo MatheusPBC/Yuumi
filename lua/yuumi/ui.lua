@@ -91,4 +91,41 @@ function M.select_task(title, callback)
   end)
 end
 
+function M.status()
+  if not state.plan then
+    util.notify("No plan loaded", vim.log.levels.WARN)
+    return
+  end
+
+  local pending = 0
+  local done = 0
+  local skipped = 0
+  local total = 0
+
+  for _, task in ipairs(state.plan.tasks or {}) do
+    for _, anchor in ipairs(task.anchors or {}) do
+      total = total + 1
+      if anchor.status == "done" then
+        done = done + 1
+      elseif anchor.status == "skipped" then
+        skipped = skipped + 1
+      else
+        pending = pending + 1
+      end
+    end
+  end
+
+  M.float({
+    "# Yuumi Status",
+    "",
+    "Plan: " .. (state.plan.title or "untitled"),
+    "Path: " .. (state.plan_path or "unknown"),
+    "",
+    "Anchors: " .. total,
+    "Pending: " .. pending,
+    "Done: " .. done,
+    "Skipped: " .. skipped,
+  }, { title = "Yuumi Status", width = 54 })
+end
+
 return M

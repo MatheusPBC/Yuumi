@@ -1,0 +1,127 @@
+*yuumi.txt* Plan-guided pair programming for Neovim
+
+Yuumi                                                     *yuumi*
+
+Yuumi reads a plan generated outside Neovim and turns it into guided
+navigation, buffer marks, hover guidance, and deterministic inline hints.
+
+The plugin does not generate plans and does not edit files by itself.
+
+QUICK START                                           *yuumi-quick-start*
+
+With lazy.nvim:
+>
+  {
+    "MatheusPBC/Yuumi",
+    config = function()
+      require("yuumi").setup()
+    end,
+  }
+<
+
+Create or generate a plan at:
+>
+  .agent/current-plan.json
+<
+
+Then run:
+>
+  :YuumiLoad
+  :YuumiFiles
+  :YuumiNext
+<
+
+COMMANDS                                                *yuumi-commands*
+
+                                                        *:YuumiLoad*
+:YuumiLoad [path]
+  Load a Yuumi JSON plan. Defaults to .agent/current-plan.json.
+
+                                                        *:YuumiFiles*
+:YuumiFiles
+  List plan anchors using vim.ui.select.
+
+                                                        *:YuumiNext*
+:YuumiNext
+  Jump to the next anchor.
+
+                                                        *:YuumiPrev*
+:YuumiPrev
+  Jump to the previous anchor.
+
+                                                        *:YuumiHover*
+:YuumiHover
+  Show reason, guidance, and done criteria for the anchor under cursor.
+
+                                                        *:YuumiStatus*
+:YuumiStatus
+  Show current plan progress in memory.
+
+                                                        *:YuumiDone*
+:YuumiDone
+  Mark the current anchor as done in memory.
+
+                                                        *:YuumiSkip*
+:YuumiSkip
+  Mark the current anchor as skipped in memory.
+
+                                                        *:YuumiAcceptInline*
+:YuumiAcceptInline
+  Accept the current deterministic inline suggestion.
+
+GPT MOCK COMMANDS                                   *yuumi-gpt-commands*
+
+These commands currently use a mock adapter and do not call a provider:
+>
+  :YuumiExplain
+  :YuumiSuggest
+  :YuumiCheck
+  :YuumiReanchor
+  :YuumiBreakdown
+<
+
+PLAN CONTRACT                                      *yuumi-plan-contract*
+
+Minimum plan shape:
+>
+  {
+    "version": 1,
+    "title": "Example plan",
+    "tasks": [
+      {
+        "id": "task-1",
+        "file": "src/example.lua",
+        "summary": "Manual edit guidance",
+        "anchors": [
+          {
+            "id": "anchor-1",
+            "line": 10,
+            "endLine": 12,
+            "reason": "Why this region matters",
+            "guidance": "What the developer should do manually",
+            "doneWhen": ["Expected behavior is implemented"],
+            "inlineSuggestions": [
+              {
+                "trigger": "local",
+                "insertText": "local value = compute_value(input)"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+<
+
+CONFIGURATION                                      *yuumi-configuration*
+
+Default setup:
+>
+  require("yuumi").setup({
+    plan_path = ".agent/current-plan.json",
+    highlight_group = "YuumiAnchor",
+    virtual_text_prefix = "yuumi: ",
+  })
+<
+
+vim:tw=78:ts=8:noet:ft=help:norl:

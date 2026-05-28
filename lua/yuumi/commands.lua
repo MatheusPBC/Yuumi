@@ -46,6 +46,12 @@ function M.create()
     end
   end, { desc = "Show Yuumi guidance for cursor", force = true })
 
+  vim.api.nvim_create_user_command("YuumiStatus", function()
+    if plan.ensure_loaded() then
+      ui.status()
+    end
+  end, { desc = "Show Yuumi plan status", force = true })
+
   vim.api.nvim_create_user_command("YuumiDone", function()
     nav.mark_status("done")
   end, { desc = "Mark current Yuumi anchor as done", force = true })

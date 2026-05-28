@@ -1,0 +1,16 @@
+:YuumiAcceptInline	yuumi.txt	/*:YuumiAcceptInline*
+:YuumiDone	yuumi.txt	/*:YuumiDone*
+:YuumiFiles	yuumi.txt	/*:YuumiFiles*
+:YuumiHover	yuumi.txt	/*:YuumiHover*
+:YuumiLoad	yuumi.txt	/*:YuumiLoad*
+:YuumiNext	yuumi.txt	/*:YuumiNext*
+:YuumiPrev	yuumi.txt	/*:YuumiPrev*
+:YuumiSkip	yuumi.txt	/*:YuumiSkip*
+:YuumiStatus	yuumi.txt	/*:YuumiStatus*
+yuumi	yuumi.txt	/*yuumi*
+yuumi-commands	yuumi.txt	/*yuumi-commands*
+yuumi-configuration	yuumi.txt	/*yuumi-configuration*
+yuumi-gpt-commands	yuumi.txt	/*yuumi-gpt-commands*
+yuumi-plan-contract	yuumi.txt	/*yuumi-plan-contract*
+yuumi-quick-start	yuumi.txt	/*yuumi-quick-start*
+yuumi.txt	yuumi.txt	/*yuumi.txt*
