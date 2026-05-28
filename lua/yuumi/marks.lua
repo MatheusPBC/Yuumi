@@ -4,6 +4,22 @@ local util = require("yuumi.util")
 
 local M = {}
 
+local status_highlights = {
+  pending = "YuumiAnchorPending",
+  done = "YuumiAnchorDone",
+  skipped = "YuumiAnchorSkipped",
+}
+
+local status_labels = {
+  pending = "pending",
+  done = "done",
+  skipped = "skipped",
+}
+
+local function status_for(anchor)
+  return status_labels[anchor.status] or "pending"
+end
+
 local function summary_for(task, anchor)
   return anchor.summary or task.summary or anchor.guidance or "planned edit"
 end
@@ -13,6 +29,22 @@ function M.setup_highlights()
     default = true,
     bg = "#2d3328",
   })
+  vim.api.nvim_set_hl(0, "YuumiAnchorPending", { default = true, bg = "#2d3328" })
+  vim.api.nvim_set_hl(0, "YuumiAnchorDone", { default = true, bg = "#1f3a2d" })
+  vim.api.nvim_set_hl(0, "YuumiAnchorSkipped", { default = true, bg = "#3a2f1f" })
+end
+
+function M.highlight_group(anchor)
+  return status_highlights[anchor.status] or status_highlights.pending
+end
+
+function M.virtual_text(task, anchor)
+  return string.format(
+    "%s[%s] %s",
+    config.options.virtual_text_prefix,
+    status_for(anchor),
+    summary_for(task, anchor)
+  )
 end
 
 function M.clear(bufnr)
@@ -42,11 +74,11 @@ function M.render_buffer(bufnr)
     for anchor_index, anchor in ipairs(task.anchors or {}) do
       local start_line = util.clamp(anchor.line, 1, line_count) - 1
       local end_line = util.clamp(anchor.endLine or anchor.line, 1, line_count)
-      local text = config.options.virtual_text_prefix .. summary_for(task, anchor)
+      local text = M.virtual_text(task, anchor)
 
       vim.api.nvim_buf_set_extmark(bufnr, state.namespace, start_line, 0, {
         end_row = end_line,
-        hl_group = config.options.highlight_group,
+        hl_group = M.highlight_group(anchor),
         hl_eol = true,
         virt_text = { { text, "Comment" } },
         virt_text_pos = "eol",

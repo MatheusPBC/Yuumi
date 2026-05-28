@@ -5,6 +5,8 @@
 :YuumiLoad	yuumi.txt	/*:YuumiLoad*
 :YuumiNext	yuumi.txt	/*:YuumiNext*
 :YuumiPrev	yuumi.txt	/*:YuumiPrev*
+:YuumiReanchor	yuumi.txt	/*:YuumiReanchor*
+:YuumiResetState	yuumi.txt	/*:YuumiResetState*
 :YuumiSkip	yuumi.txt	/*:YuumiSkip*
 :YuumiStatus	yuumi.txt	/*:YuumiStatus*
 yuumi	yuumi.txt	/*yuumi*

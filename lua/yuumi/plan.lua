@@ -5,6 +5,32 @@ local util = require("yuumi.util")
 
 local M = {}
 
+local function validate_string_list(list, path)
+  if type(list) ~= "table" then
+    return path .. " must be a list"
+  end
+
+  for index, item in ipairs(list) do
+    if type(item) ~= "string" then
+      return string.format("%s[%d] must be a string", path, index)
+    end
+  end
+
+  return nil
+end
+
+local function validate_inline_suggestion(suggestion, path)
+  if type(suggestion.trigger) ~= "string" then
+    return path .. ".trigger must be a string"
+  end
+
+  if type(suggestion.insertText) ~= "string" then
+    return path .. ".insertText must be a string"
+  end
+
+  return nil
+end
+
 local function validate_anchor(anchor, task_index, anchor_index)
   if type(anchor.line) ~= "number" then
     return string.format("tasks[%d].anchors[%d].line must be a number", task_index, anchor_index)
@@ -12,6 +38,28 @@ local function validate_anchor(anchor, task_index, anchor_index)
 
   if anchor.endLine and type(anchor.endLine) ~= "number" then
     return string.format("tasks[%d].anchors[%d].endLine must be a number", task_index, anchor_index)
+  end
+
+  local path = string.format("tasks[%d].anchors[%d]", task_index, anchor_index)
+
+  if anchor.doneWhen then
+    local err = validate_string_list(anchor.doneWhen, path .. ".doneWhen")
+    if err then
+      return err
+    end
+  end
+
+  if anchor.inlineSuggestions then
+    if type(anchor.inlineSuggestions) ~= "table" then
+      return path .. ".inlineSuggestions must be a list"
+    end
+
+    for index, suggestion in ipairs(anchor.inlineSuggestions) do
+      local err = validate_inline_suggestion(suggestion, string.format("%s.inlineSuggestions[%d]", path, index))
+      if err then
+        return err
+      end
+    end
   end
 
   return nil

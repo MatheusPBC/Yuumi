@@ -79,4 +79,17 @@ function M.load()
   end
 end
 
+function M.reset()
+  if state.plan then
+    for _, task in ipairs(state.plan.tasks or {}) do
+      for _, anchor in ipairs(task.anchors or {}) do
+        anchor.status = nil
+      end
+    end
+  end
+
+  os.remove(util.resolve_path(config.options.state_path))
+  return true
+end
+
 return M

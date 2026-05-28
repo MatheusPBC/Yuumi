@@ -65,19 +65,30 @@ COMMANDS                                                *yuumi-commands*
 :YuumiSkip
   Mark the current anchor as skipped in memory.
 
+                                                        *:YuumiResetState*
+:YuumiResetState
+  Clear persisted state from .agent/yuumi-state.json and remove in-memory
+  anchor statuses.
+
+                                                        *:YuumiReanchor*
+:YuumiReanchor
+  Try to move anchors in the current buffer using anchorText, beforeText, or
+  afterText from the plan. If no deterministic match is found and a GPT command
+  is configured, it falls back to the configured adapter.
+
                                                         *:YuumiAcceptInline*
 :YuumiAcceptInline
   Accept the current deterministic inline suggestion.
   By default the same action is mapped to <M-y> in insert mode.
 
-GPT MOCK COMMANDS                                   *yuumi-gpt-commands*
+GPT COMMANDS                                        *yuumi-gpt-commands*
 
-These commands currently use a mock adapter and do not call a provider:
+These commands use a configured command adapter when gpt_command is set.
+The command receives a JSON payload on stdin and should write text to stdout.
 >
   :YuumiExplain
   :YuumiSuggest
   :YuumiCheck
-  :YuumiReanchor
   :YuumiBreakdown
 <
 
@@ -98,6 +109,9 @@ Minimum plan shape:
             "id": "anchor-1",
             "line": 10,
             "endLine": 12,
+            "anchorText": "exact text to find if line numbers drift",
+            "beforeText": "nearby text before the anchor",
+            "afterText": "nearby text after the anchor",
             "reason": "Why this region matters",
             "guidance": "What the developer should do manually",
             "doneWhen": ["Expected behavior is implemented"],
@@ -124,6 +138,7 @@ Default setup:
     highlight_group = "YuumiAnchor",
     virtual_text_prefix = "yuumi: ",
     accept_keymap = "<M-y>",
+    gpt_command = { "opencode", "run", "--json" },
   })
 <
 

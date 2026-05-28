@@ -12,6 +12,8 @@
           "id": "anchor-1",
           "line": 1,
           "endLine": 2,
+          "anchorText": "-- Open this file",
+          "afterText": "-- Type \"local\"",
           "kind": "manual-edit",
           "reason": "This region is intentionally small so Yuumi can demonstrate guidance without editing for you.",
           "guidance": "Create a local function that returns a greeting string. You write the code; Yuumi only suggests the shape.",

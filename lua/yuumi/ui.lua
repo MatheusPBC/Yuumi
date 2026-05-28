@@ -3,6 +3,10 @@ local util = require("yuumi.util")
 
 local M = {}
 
+local function status_for(anchor)
+  return anchor.status or "pending"
+end
+
 local function lines_for_anchor(task, anchor)
   local lines = {
     "# " .. (task.summary or task.id or "Yuumi task"),
@@ -72,7 +76,7 @@ function M.select_task(title, callback)
   for task_index, task in ipairs(state.plan.tasks) do
     for anchor_index, anchor in ipairs(task.anchors or {}) do
       table.insert(items, {
-        label = string.format("%s:%d %s", task.file, anchor.line, task.summary or anchor.guidance or task.id),
+        label = M.task_label(task, anchor),
         task_index = task_index,
         anchor_index = anchor_index,
       })
@@ -89,6 +93,16 @@ function M.select_task(title, callback)
       callback(item.task_index, item.anchor_index)
     end
   end)
+end
+
+function M.task_label(task, anchor)
+  return string.format(
+    "[%s] %s:%d %s",
+    status_for(anchor),
+    task.file,
+    anchor.line,
+    task.summary or anchor.guidance or task.id or "planned edit"
+  )
 end
 
 function M.status()

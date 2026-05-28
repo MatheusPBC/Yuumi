@@ -2,7 +2,9 @@ local gpt = require("yuumi.gpt")
 local inline = require("yuumi.inline")
 local marks = require("yuumi.marks")
 local nav = require("yuumi.nav")
+local persist = require("yuumi.persist")
 local plan = require("yuumi.plan")
+local reanchor = require("yuumi.reanchor")
 local ui = require("yuumi.ui")
 
 local M = {}
@@ -60,6 +62,11 @@ function M.create()
     nav.mark_status("skipped")
   end, { desc = "Mark current Yuumi anchor as skipped", force = true })
 
+  vim.api.nvim_create_user_command("YuumiResetState", function()
+    persist.reset()
+    marks.render_all_loaded_buffers()
+  end, { desc = "Reset persisted Yuumi state", force = true })
+
   vim.api.nvim_create_user_command("YuumiAcceptInline", function()
     inline.accept_current()
   end, { desc = "Accept current Yuumi inline suggestion", force = true })
@@ -67,7 +74,14 @@ function M.create()
   vim.api.nvim_create_user_command("YuumiExplain", gpt.explain, { desc = "Explain current Yuumi anchor", force = true })
   vim.api.nvim_create_user_command("YuumiSuggest", gpt.suggest, { desc = "Suggest an alternative for current Yuumi anchor", force = true })
   vim.api.nvim_create_user_command("YuumiCheck", gpt.check, { desc = "Check current edit against Yuumi anchor", force = true })
-  vim.api.nvim_create_user_command("YuumiReanchor", gpt.reanchor, { desc = "Reanchor current Yuumi task", force = true })
+  vim.api.nvim_create_user_command("YuumiReanchor", function()
+    if reanchor.current_buffer() then
+      marks.render_buffer(0)
+      return
+    end
+
+    gpt.reanchor()
+  end, { desc = "Reanchor current Yuumi task", force = true })
   vim.api.nvim_create_user_command("YuumiBreakdown", gpt.breakdown, { desc = "Break down current Yuumi task", force = true })
 end
 

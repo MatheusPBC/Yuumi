@@ -7,6 +7,7 @@ M.defaults = {
   virtual_text_prefix = "yuumi: ",
   inline_debounce_ms = 80,
   accept_keymap = "<M-y>",
+  gpt_command = nil,
 }
 
 M.options = vim.deepcopy(M.defaults)
