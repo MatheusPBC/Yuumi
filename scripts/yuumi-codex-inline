@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+payload="$(</dev/stdin)"
+
+prompt="You are Yuumi's inline completion adapter.
+
+You receive a JSON payload from a Neovim plugin. The payload includes the
+current file, cursor line, typed prefix, nearby lines, plan guidance, and the
+planned writeText block.
+
+Return only the exact text suffix that should be inserted at the current cursor.
+Do not return Markdown.
+Do not wrap the answer in quotes.
+Do not explain.
+Do not include the already typed prefix.
+If no useful suffix is safe, return an empty response.
+
+Payload:
+${payload}"
+
+cmd=(codex exec --sandbox read-only --ephemeral)
+
+if [[ -n "${YUUMI_CODEX_MODEL:-}" ]]; then
+  cmd+=(--model "${YUUMI_CODEX_MODEL}")
+fi
+
+"${cmd[@]}" "${prompt}"

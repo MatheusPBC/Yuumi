@@ -192,6 +192,30 @@ stdout: Markdown/text response to show in a floating window
 Keep secrets in environment variables such as `OPENAI_API_KEY`; do not commit
 them into the repository.
 
+### Codex CLI OAuth adapter
+
+If you use Codex CLI with ChatGPT/OAuth login, Yuumi can call it through the
+included wrapper:
+
+```lua
+require("yuumi").setup({
+  inline_ai_enabled = true,
+  gpt_command = {
+    "/home/matheus/Documentos/vscode/Yuumi/scripts/yuumi-codex-inline",
+  },
+})
+```
+
+The wrapper reads Yuumi's JSON payload from stdin and runs `codex exec` with a
+read-only sandbox. It does not need an API key in the plugin. Log in to Codex CLI
+with your ChatGPT/OAuth account before using it.
+
+Optionally choose a model with:
+
+```bash
+export YUUMI_CODEX_MODEL="gpt-5.2"
+```
+
 ## State
 
 Yuumi persists local runtime state in `.agent/yuumi-state.json`:
