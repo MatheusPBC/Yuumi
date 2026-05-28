@@ -14,5 +14,7 @@ require("tests.gpt_spec")
 require("tests.blink_spec")
 require("tests.session_spec")
 require("tests.docs_spec")
+require("tests.path_spec")
+require("tests.load_spec")
 
 minit.run()

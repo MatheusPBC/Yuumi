@@ -47,6 +47,26 @@ function M.virtual_text(task, anchor)
   )
 end
 
+function M.virtual_lines(task, anchor)
+  local lines = {
+    { { "  Yuumi plan: " .. summary_for(task, anchor), "Comment" } },
+  }
+
+  if anchor.guidance then
+    table.insert(lines, { { "  Write: " .. anchor.guidance, "Comment" } })
+  end
+
+  if anchor.removeText then
+    table.insert(lines, { { "  Remove: " .. anchor.removeText, "Comment" } })
+  end
+
+  if anchor.doneWhen and anchor.doneWhen[1] then
+    table.insert(lines, { { "  Done: " .. anchor.doneWhen[1], "Comment" } })
+  end
+
+  return lines
+end
+
 function M.clear(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr or 0, state.namespace, 0, -1)
 end
@@ -82,6 +102,7 @@ function M.render_buffer(bufnr)
         hl_eol = true,
         virt_text = { { text, "Comment" } },
         virt_text_pos = "eol",
+        virt_lines = config.options.show_virtual_lines and M.virtual_lines(task, anchor) or nil,
         priority = 120,
       })
     end

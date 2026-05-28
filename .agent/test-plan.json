@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "title": "Yuumi manual smoke test",
+  "tasks": [
+    {
+      "id": "task-1",
+      "file": "examples/sample.lua",
+      "status": "pending",
+      "summary": "Criar uma função simples de saudação",
+      "anchors": [
+        {
+          "id": "anchor-1",
+          "line": 1,
+          "endLine": 2,
+          "anchorText": "-- Open this file",
+          "afterText": "-- Type \"local\"",
+          "kind": "manual-edit",
+          "reason": "Este trecho é pequeno e serve para validar o fluxo guiado do Yuumi sem mexer em código real.",
+          "guidance": "Escreva manualmente uma função local chamada greeting que recebe name e retorna uma string de saudação.",
+          "removeText": "Se houver comentário ou print antigo nesta região, apague manualmente antes de finalizar.",
+          "doneWhen": [
+            "Existe uma função local chamada greeting",
+            "A função retorna uma string usando o parâmetro name",
+            "Você conseguiu marcar a anchor como done com :YuumiDone"
+          ],
+          "inlineSuggestions": [
+            {
+              "trigger": "local",
+              "insertText": "local function greeting(name)"
+            },
+            {
+              "trigger": "return",
+              "insertText": "return \"Hello, \" .. name"
+            },
+            {
+              "trigger": "end",
+              "insertText": "end"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -83,8 +83,19 @@ function M.accept_current()
 
   local suggestion = inline.suggestion
   local suffix = suggestion.insertText:sub(#suggestion.trigger + 1)
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local line = vim.api.nvim_get_current_line()
+  local insert_row = row - 1
+  local insert_col = math.min(col, #line)
+
+  if suggestion.trigger and line:match(vim.pesc(suggestion.trigger) .. "$ ") then
+    insert_col = #line
+  elseif suggestion.trigger and line:match(vim.pesc(suggestion.trigger) .. "$") then
+    insert_col = #line
+  end
+
   M.clear(inline.bufnr)
-  vim.api.nvim_buf_set_text(inline.bufnr, inline.row, inline.col, inline.row, inline.col, { suffix })
+  vim.api.nvim_buf_set_text(inline.bufnr, insert_row, insert_col, insert_row, insert_col, { suffix })
   return true
 end
 

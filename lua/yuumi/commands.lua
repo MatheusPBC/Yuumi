@@ -9,14 +9,19 @@ local ui = require("yuumi.ui")
 
 local M = {}
 
-local function load(opts)
+function M.load(opts, after_load)
   if plan.load(opts.args) then
     marks.render_all_loaded_buffers()
+    if after_load then
+      after_load()
+    elseif require("yuumi.config").options.open_files_on_load then
+      nav.files()
+    end
   end
 end
 
 function M.create()
-  vim.api.nvim_create_user_command("YuumiLoad", load, {
+  vim.api.nvim_create_user_command("YuumiLoad", M.load, {
     nargs = "?",
     complete = "file",
     desc = "Load a Yuumi plan JSON",

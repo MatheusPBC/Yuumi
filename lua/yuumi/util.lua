@@ -23,8 +23,37 @@ function M.resolve_path(path)
   return M.join_path(M.root(), path)
 end
 
-function M.read_file(path)
+function M.resolve_existing_path(path)
   local resolved = M.resolve_path(path)
+  if resolved and vim.uv.fs_stat(resolved) then
+    return resolved
+  end
+
+  if not path or path == "" or vim.startswith(path, "/") then
+    return resolved
+  end
+
+  local buffer_path = vim.api.nvim_buf_get_name(0)
+  local dir = buffer_path ~= "" and vim.fn.fnamemodify(buffer_path, ":p:h") or M.root()
+
+  while dir and dir ~= "/" and dir ~= "" do
+    local candidate = M.join_path(dir, path)
+    if vim.uv.fs_stat(candidate) then
+      return candidate
+    end
+
+    local parent = vim.fn.fnamemodify(dir, ":h")
+    if parent == dir then
+      break
+    end
+    dir = parent
+  end
+
+  return resolved
+end
+
+function M.read_file(path)
+  local resolved = M.resolve_existing_path(path)
   local file = io.open(resolved, "r")
 
   if not file then
