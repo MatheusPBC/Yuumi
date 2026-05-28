@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "title": "Yuumi example plan",
+  "tasks": [
+    {
+      "id": "task-1",
+      "file": "examples/sample.lua",
+      "status": "pending",
+      "summary": "Add a greeting helper manually",
+      "anchors": [
+        {
+          "id": "anchor-1",
+          "line": 1,
+          "endLine": 2,
+          "kind": "manual-edit",
+          "reason": "This region is intentionally small so Yuumi can demonstrate guidance without editing for you.",
+          "guidance": "Create a local function that returns a greeting string. You write the code; Yuumi only suggests the shape.",
+          "doneWhen": [
+            "A local function exists",
+            "The function returns a string"
+          ],
+          "inlineSuggestions": [
+            {
+              "trigger": "local",
+              "insertText": "local function greeting(name)"
+            },
+            {
+              "trigger": "return",
+              "insertText": "return \"Hello, \" .. name"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

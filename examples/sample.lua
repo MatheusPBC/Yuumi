@@ -1,0 +1,2 @@
+-- Open this file and run :YuumiLoad, then :YuumiNext.
+-- Type "local" on the guided line to see deterministic ghost text.
