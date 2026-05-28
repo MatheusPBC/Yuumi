@@ -101,7 +101,7 @@ function M.render_buffer(bufnr)
         hl_group = M.highlight_group(anchor),
         hl_eol = true,
         virt_text = { { text, "Comment" } },
-        virt_text_pos = "eol",
+        virt_text_pos = config.options.virtual_text_pos,
         virt_lines = config.options.show_virtual_lines and M.virtual_lines(task, anchor) or nil,
         priority = 120,
       })

@@ -27,3 +27,28 @@ minit.test("formats rich virtual guidance lines", function()
   minit.eq("  Remove: Remova o print antigo.", lines[3][1][1])
   minit.eq("  Done: A função existe", lines[4][1][1])
 end)
+
+minit.test("renders eol summary away from edited code", function()
+  local state = require("yuumi.state")
+
+  state.plan = {
+    tasks = {
+      {
+        file = "",
+        summary = "Edit example",
+        anchors = { { line = 1, guidance = "Do it" } },
+      },
+    },
+  }
+  state.tasks_by_file = { [""] = { 1 } }
+
+  vim.cmd("enew!")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, { "local function greeting(name)" })
+  marks.render_buffer(0)
+
+  local extmarks = vim.api.nvim_buf_get_extmarks(0, state.namespace, 0, -1, { details = true })
+  minit.eq("right_align", extmarks[1][4].virt_text_pos)
+
+  state.reset()
+  vim.cmd("enew!")
+end)

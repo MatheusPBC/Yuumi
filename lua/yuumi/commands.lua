@@ -1,3 +1,4 @@
+local board = require("yuumi.board")
 local gpt = require("yuumi.gpt")
 local inline = require("yuumi.inline")
 local marks = require("yuumi.marks")
@@ -15,6 +16,7 @@ function M.load(opts, after_load)
     if after_load then
       after_load()
     elseif require("yuumi.config").options.open_files_on_load then
+      board.open()
       nav.files()
     end
   end
@@ -58,6 +60,10 @@ function M.create()
       ui.status()
     end
   end, { desc = "Show Yuumi plan status", force = true })
+
+  vim.api.nvim_create_user_command("YuumiBoard", function()
+    board.open()
+  end, { desc = "Show Yuumi guidance board", force = true })
 
   vim.api.nvim_create_user_command("YuumiDone", function()
     nav.mark_status("done")

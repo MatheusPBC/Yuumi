@@ -1,4 +1,5 @@
 :YuumiAcceptInline	yuumi.txt	/*:YuumiAcceptInline*
+:YuumiBoard	yuumi.txt	/*:YuumiBoard*
 :YuumiDone	yuumi.txt	/*:YuumiDone*
 :YuumiFiles	yuumi.txt	/*:YuumiFiles*
 :YuumiHover	yuumi.txt	/*:YuumiHover*
@@ -14,6 +15,7 @@ yuumi-blink	yuumi.txt	/*yuumi-blink*
 yuumi-commands	yuumi.txt	/*yuumi-commands*
 yuumi-configuration	yuumi.txt	/*yuumi-configuration*
 yuumi-gpt-commands	yuumi.txt	/*yuumi-gpt-commands*
+yuumi-inline-guidance	yuumi.txt	/*yuumi-inline-guidance*
 yuumi-plan-contract	yuumi.txt	/*yuumi-plan-contract*
 yuumi-quick-start	yuumi.txt	/*yuumi-quick-start*
 yuumi.txt	yuumi.txt	/*yuumi.txt*

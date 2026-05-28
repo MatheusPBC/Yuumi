@@ -1,7 +1,9 @@
 local state = require("yuumi.state")
 local util = require("yuumi.util")
 
-local M = {}
+local M = {
+  floats = {},
+}
 
 local function status_for(anchor)
   return anchor.status or "pending"
@@ -37,6 +39,15 @@ end
 
 function M.float(lines, opts)
   opts = opts or {}
+  local title = opts.title or "Yuumi"
+  local existing = M.floats[title]
+
+  if existing and vim.api.nvim_win_is_valid(existing) then
+    vim.api.nvim_win_close(existing, true)
+    M.floats[title] = nil
+    return nil
+  end
+
   local width = opts.width or 72
   local height = math.min(#lines, opts.height or 18)
   local bufnr = vim.api.nvim_create_buf(false, true)
@@ -45,16 +56,26 @@ function M.float(lines, opts)
   vim.bo[bufnr].bufhidden = "wipe"
   vim.bo[bufnr].filetype = "markdown"
 
-  vim.api.nvim_open_win(bufnr, false, {
+  local win = vim.api.nvim_open_win(bufnr, false, {
     relative = "cursor",
     row = 1,
     col = 0,
     width = width,
     height = height,
     border = "rounded",
-    title = opts.title or "Yuumi",
+    title = title,
     style = "minimal",
   })
+
+  M.floats[title] = win
+  vim.keymap.set("n", "q", function()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+    M.floats[title] = nil
+  end, { buffer = bufnr, nowait = true, silent = true })
+
+  return win
 end
 
 function M.hover(task, anchor)

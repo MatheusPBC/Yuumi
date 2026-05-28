@@ -19,6 +19,7 @@ local function open_anchor(task_index, anchor_index)
   vim.cmd.edit(vim.fn.fnameescape(util.resolve_path(task.file)))
   vim.api.nvim_win_set_cursor(0, { anchor.line, 0 })
   marks.render_buffer(0)
+  pcall(require("yuumi.board").open)
 end
 
 function M.open_current()
@@ -98,6 +99,7 @@ function M.mark_status(status)
   state.cursor = position
   persist.save()
   marks.render_all_loaded_buffers()
+  pcall(require("yuumi.board").open)
   util.notify(string.format("Marked %s as %s", anchor.id or task.id or "anchor", status))
 end
 
