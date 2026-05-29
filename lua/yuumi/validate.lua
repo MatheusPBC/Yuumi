@@ -1,6 +1,7 @@
 local marks = require("yuumi.marks")
 local ui = require("yuumi.ui")
 local util = require("yuumi.util")
+local anchor_util = require("yuumi.anchor")
 
 local M = {}
 
@@ -50,7 +51,7 @@ function M.current_buffer()
     return nil, "No Yuumi anchor at cursor"
   end
 
-  local expected_lines = anchor.writeText or {}
+  local expected_lines = anchor_util.write_text(anchor)
   if #expected_lines == 0 then
     return nil, "Current anchor has no writeText"
   end

@@ -52,10 +52,11 @@ Local development setup:
 ## Quick Start
 
 ```vim
-:YuumiLoad .agent/test-plan.json
-:YuumiBoard
-:YuumiNext
+:Yuumi
 ```
+
+`:Yuumi` is the main workflow command. With no plan loaded, it opens the plan
+picker. With a plan loaded, it opens the board and patch picker.
 
 This repository includes two sample plans you can alternate between:
 
@@ -66,9 +67,10 @@ This repository includes two sample plans you can alternate between:
 ```
 
 `current-plan.json` targets `examples/sample.lua`. `html-plan.json` targets
-`examples/index.html`. `:YuumiPlans` opens a picker for plan files in `.agent`.
-`:YuumiFiles` does not load a new plan; it only lists anchors from the plan that
-is already loaded.
+`examples/index.html`. `:YuumiLoad` without a path opens the same plan picker as
+`:YuumiPlans`. The picker searches `.agent/plans` first, then `.agent`.
+`:YuumiFiles` does not load a new plan; it lists the files from the plan that is
+already loaded, with pending anchor counts.
 
 Then edit the highlighted region manually. If ghost text appears, accept it in
 insert mode with `<M-y>`.
@@ -82,9 +84,9 @@ To check your progress:
 ## Workflow
 
 1. Generate or write a plan JSON.
-2. Run `:YuumiLoad [path]`.
-3. Pick an anchor from the picker or navigate with `:YuumiNext`.
-4. Read the right-side `:YuumiBoard`.
+2. Run `:Yuumi` and choose a plan.
+3. Run `:Yuumi` again to pick a patch, or navigate patches with `:YuumiNext`.
+4. Read the right-side board.
 5. Type the requested code manually.
 6. Accept ghost text with `<M-y>` when useful.
 7. Run `:YuumiValidate` or `:YuumiCheck`.
@@ -94,9 +96,10 @@ To check your progress:
 
 | Command | Purpose |
 | --- | --- |
-| `:YuumiLoad [path]` | Load a plan JSON file. Defaults to `.agent/current-plan.json`. |
-| `:YuumiPlans` | Pick and load a plan JSON from `.agent`. |
-| `:YuumiFiles` | Pick a task/anchor with `vim.ui.select`. |
+| `:Yuumi` | Main workflow: pick a plan when none is loaded, otherwise pick a patch. |
+| `:YuumiLoad [path]` | Without a path, pick a plan. With a path, load that plan directly. |
+| `:YuumiPlans` | Pick and load a plan JSON from `.agent/plans` or `.agent`. |
+| `:YuumiFiles` | Pick a target file from the currently loaded plan. |
 | `:YuumiNext` / `:YuumiPrev` | Navigate through anchors. |
 | `:YuumiBoard` | Show the right-side guidance board. |
 | `:YuumiHover` | Show guidance for the current anchor. |
@@ -119,6 +122,7 @@ focused, press `q`.
 
 ```lua
 keys = {
+  { "<leader>yy", "<cmd>Yuumi<cr>", desc = "Yuumi" },
   { "<leader>yl", "<cmd>YuumiLoad<cr>", desc = "Yuumi Load Plan" },
   { "<leader>yP", "<cmd>YuumiPlans<cr>", desc = "Yuumi Plans" },
   { "<leader>yf", "<cmd>YuumiFiles<cr>", desc = "Yuumi Files" },
@@ -157,14 +161,46 @@ require("yuumi").setup({
 Notes:
 
 - `virtual_text_pos = "right_align"` keeps guidance away from code text.
-- `open_files_on_load = true` opens the board and task picker after loading.
+- `open_files_on_load = true` opens the board and task picker after explicit path loads. Plain `:YuumiLoad` opens the plan picker first.
 - `inline_ai_enabled = false` keeps AI calls off unless explicitly enabled.
 - `gpt_command` is any executable command that receives JSON on stdin and
   returns text on stdout.
 
 ## Plan Contract
 
-Minimum `.agent/current-plan.json`:
+Prefer `version: 2` guided patch plans. They locate edit regions by context and
+do not depend on exact line numbers or exact indentation.
+
+Guided patch example:
+
+```json
+{
+  "version": 2,
+  "title": "Add AppSync debug log",
+  "patches": [
+    {
+      "file": "src/handlers/example/lambda_function.py",
+      "id": "log-after-parse-input",
+      "summary": "Add a structured log after input parsing.",
+      "locator": {
+        "afterText": "device_id, payload = _parse_input(event)",
+        "beforeText": "device_lookup_id = device_id"
+      },
+      "insert": [
+        "logger.info(",
+        "    \"AppSync device command input parsed\",",
+        "    extra={\"device_id\": device_id},",
+        ")"
+      ],
+      "doneWhen": ["The log is between parse_input and device_lookup_id"]
+    }
+  ]
+}
+```
+
+Yuumi normalizes v2 patches internally. Legacy line-based v1 plans are still supported.
+
+Legacy v1 `.agent/current-plan.json` shape:
 
 ```json
 {
@@ -209,9 +245,11 @@ Important fields:
 | --- | --- |
 | `file` | Target file path relative to the project root. |
 | `line` / `endLine` | Planned edit region. |
+| `locator.afterText` / `locator.beforeText` | Context boundaries for guided patches. |
 | `reason` | Why this anchor exists. |
 | `guidance` | Human-readable instruction. |
-| `writeText` | Exact planned lines shown in the board and used by inline/validation. |
+| `writeText` / `patch.writeText` | Planned lines shown in the board and used by inline/validation. |
+| `patch.mode` | Guided patch operation, currently `insert-between`. |
 | `doneWhen` | Checklist shown in the board and hover popup. |
 | `inlineSuggestions` | Optional trigger-based deterministic hints. |
 | `anchorText` / `beforeText` / `afterText` | Deterministic reanchor hints when line numbers drift. |

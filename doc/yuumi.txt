@@ -27,21 +27,25 @@ Create or generate a plan at:
 
 Then run:
 >
-  :YuumiLoad
-  :YuumiBoard
-  :YuumiFiles
-  :YuumiNext
+  :Yuumi
 <
 
 COMMANDS                                                *yuumi-commands*
 
+                                                        *:Yuumi*
+:Yuumi
+  Main workflow command. With no plan loaded, opens the plan picker. With a
+  plan loaded, opens the board and patch picker.
+
                                                         *:YuumiLoad*
 :YuumiLoad [path]
-  Load a Yuumi JSON plan. Defaults to .agent/current-plan.json.
+  Without a path, open the plan picker. With a path, load that plan directly.
+  The picker searches .agent/plans first, then .agent.
 
                                                         *:YuumiPlans*
 :YuumiPlans
-  Pick and load a plan JSON from .agent. This switches the active plan.
+  Pick and load a plan JSON from .agent/plans or .agent. This switches the
+  active plan.
 
                                                         *:YuumiBoard*
 :YuumiBoard
@@ -51,7 +55,8 @@ COMMANDS                                                *yuumi-commands*
 
                                                         *:YuumiFiles*
 :YuumiFiles
-  List plan anchors using vim.ui.select.
+  List target files from the currently loaded plan using vim.ui.select. Each
+  entry includes pending anchor count and opens the first anchor in that file.
 
                                                         *:YuumiNext*
 :YuumiNext
@@ -134,7 +139,29 @@ variables such as OPENAI_API_KEY or delegate to OpenCode/local wrappers.
 
 PLAN CONTRACT                                      *yuumi-plan-contract*
 
-Minimum plan shape:
+Prefer version 2 guided patch plans. They locate edit regions by context:
+>
+  {
+    "version": 2,
+    "title": "Add debug logs",
+    "patches": [
+      {
+        "id": "log-after-parse-input",
+        "file": "src/example.py",
+        "locator": {
+          "afterText": "device_id, payload = _parse_input(event)",
+          "beforeText": "device_lookup_id = device_id"
+        },
+        "insert": ["logger.info(\"parsed\")"]
+      }
+    ]
+  }
+<
+
+Yuumi normalizes v2 patches internally. Line-based legacy anchors are still
+supported.
+
+Legacy v1 plan shape:
 >
   {
     "version": 1,
@@ -191,9 +218,10 @@ Default setup:
   })
 <
 
-When open_files_on_load is enabled, :YuumiLoad opens the board before the file
-picker. The default virtual_text_pos is right_align so guidance does not look
-like typed code.
+When open_files_on_load is enabled, explicit path loads can open the board and
+file picker after loading. Plain :YuumiLoad opens the plan picker first. The
+default virtual_text_pos is right_align so guidance does not look like typed
+code.
 
 INLINE GUIDANCE                                      *yuumi-inline-guidance*
 

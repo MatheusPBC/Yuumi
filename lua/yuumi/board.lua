@@ -1,4 +1,6 @@
 local state = require("yuumi.state")
+local anchor_util = require("yuumi.anchor")
+local locator = require("yuumi.locator")
 local util = require("yuumi.util")
 
 local M = {
@@ -19,15 +21,39 @@ local function current_anchor()
   return task, task.anchors and task.anchors[state.cursor.anchor]
 end
 
-local function add_current_details(lines)
-  local task, anchor = current_anchor()
+local function current_file_anchor()
+  local relative = util.buf_relative_path(0)
+  local task_indexes = state.tasks_by_file[relative]
+
+  if not task_indexes then
+    return nil, nil
+  end
+
+  local row = vim.api.nvim_win_get_cursor(0)[1]
+
+  for _, task_index in ipairs(task_indexes) do
+    local task = state.plan.tasks[task_index]
+    for _, anchor in ipairs(task.anchors or {}) do
+      local start_line, end_line = locator.range(0, anchor)
+      if row >= start_line and row <= end_line then
+        return task, anchor
+      end
+    end
+  end
+
+  local task = state.plan.tasks[task_indexes[1]]
+  return task, task and task.anchors and task.anchors[1]
+end
+
+local function add_anchor_details(lines, title, task, anchor)
   if not task or not anchor then
     return
   end
 
   table.insert(lines, "")
-  table.insert(lines, "Current")
-  table.insert(lines, "  " .. task.file .. ":" .. anchor.line)
+  table.insert(lines, title)
+  local start_line = locator.range(0, anchor)
+  table.insert(lines, "  " .. task.file .. ":" .. start_line)
   table.insert(lines, "  " .. (task.summary or anchor.guidance or task.id or "planned edit"))
 
   if anchor.guidance then
@@ -36,10 +62,11 @@ local function add_current_details(lines)
     table.insert(lines, "  " .. anchor.guidance)
   end
 
-  if anchor.writeText then
+  local write_text = anchor_util.write_text(anchor)
+  if #write_text > 0 then
     table.insert(lines, "")
     table.insert(lines, "Write exactly:")
-    for _, item in ipairs(anchor.writeText) do
+    for _, item in ipairs(write_text) do
       table.insert(lines, "  " .. item)
     end
   end
@@ -57,6 +84,17 @@ local function add_current_details(lines)
       table.insert(lines, "  - " .. item)
     end
   end
+end
+
+local function add_current_details(lines)
+  local file_task, file_anchor = current_file_anchor()
+  if file_task and file_anchor then
+    add_anchor_details(lines, "Current file", file_task, file_anchor)
+    return
+  end
+
+  local task, anchor = current_anchor()
+  add_anchor_details(lines, "Current", task, anchor)
 end
 
 function M.lines()
@@ -129,6 +167,14 @@ function M.open()
     title = " Yuumi ",
     style = "minimal",
   })
+end
+
+function M.refresh()
+  if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
+    return
+  end
+
+  vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, M.lines())
 end
 
 return M

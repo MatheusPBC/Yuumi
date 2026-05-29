@@ -1,4 +1,5 @@
 local commands = require("yuumi.commands")
+local board = require("yuumi.board")
 local config = require("yuumi.config")
 local inline = require("yuumi.inline")
 local marks = require("yuumi.marks")
@@ -14,6 +15,7 @@ function M.setup(opts)
     group = vim.api.nvim_create_augroup("YuumiMarks", { clear = true }),
     callback = function(event)
       marks.render_buffer(event.buf)
+      board.refresh()
     end,
   })
 

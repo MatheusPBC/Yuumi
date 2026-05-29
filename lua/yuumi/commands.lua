@@ -12,7 +12,28 @@ local validate = require("yuumi.validate")
 
 local M = {}
 
+function M.main()
+  if not require("yuumi.state").plan then
+    M.load({ args = "" })
+    return
+  end
+
+  board.open()
+  ui.select_task("Yuumi patches", function(task_index, anchor_index)
+    nav.open(task_index, anchor_index)
+  end)
+end
+
 function M.load(opts, after_load)
+  if not opts.args or opts.args == "" then
+    plans.select(function(path)
+      M.load({ args = path }, after_load or function()
+        board.open()
+      end)
+    end)
+    return
+  end
+
   if plan.load(opts.args) then
     marks.render_all_loaded_buffers()
     if after_load then
@@ -25,6 +46,10 @@ function M.load(opts, after_load)
 end
 
 function M.create()
+  vim.api.nvim_create_user_command("Yuumi", function()
+    M.main()
+  end, { desc = "Open Yuumi plan or patch picker", force = true })
+
   vim.api.nvim_create_user_command("YuumiLoad", M.load, {
     nargs = "?",
     complete = "file",

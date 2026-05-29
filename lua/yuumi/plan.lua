@@ -5,6 +5,71 @@ local util = require("yuumi.util")
 
 local M = {}
 
+local function patch_to_anchor(patch)
+  return {
+    id = patch.id,
+    line = patch.line,
+    endLine = patch.endLine,
+    kind = patch.kind or "guided-patch",
+    locator = patch.locator,
+    reason = patch.reason,
+    guidance = patch.guidance or patch.summary,
+    patch = {
+      mode = patch.mode or "insert-between",
+      writeText = patch.insert or patch.writeText or (patch.patch and patch.patch.writeText),
+    },
+    doneWhen = patch.doneWhen,
+    inlineSuggestions = patch.inlineSuggestions,
+  }
+end
+
+local function normalize_v2(plan)
+  local tasks = {}
+  local task_by_file = {}
+
+  for _, patch in ipairs(plan.patches or {}) do
+    local task = task_by_file[patch.file]
+    if not task then
+      task = {
+        id = (patch.file or "patches"):gsub("[^%w]+", "-"):gsub("^%-", ""):gsub("%-$", ""),
+        file = patch.file,
+        status = "pending",
+        summary = "Guided patches for " .. patch.file,
+        anchors = {},
+      }
+      task_by_file[patch.file] = task
+      table.insert(tasks, task)
+    end
+
+    table.insert(task.anchors, patch_to_anchor(patch))
+  end
+
+  return {
+    version = 1,
+    sourceVersion = 2,
+    title = plan.title,
+    tasks = tasks,
+  }
+end
+
+function M.normalize(plan)
+  if plan.version == 2 then
+    return normalize_v2(plan)
+  end
+
+  return plan
+end
+
+local function plan_root_for(path)
+  local agent_dir = "/.agent/"
+  local agent_start = path:find(agent_dir, 1, true)
+  if agent_start then
+    return path:sub(1, agent_start - 1)
+  end
+
+  return vim.fn.fnamemodify(path, ":p:h")
+end
+
 local function validate_string_list(list, path)
   if type(list) ~= "table" then
     return path .. " must be a list"
@@ -32,7 +97,7 @@ local function validate_inline_suggestion(suggestion, path)
 end
 
 local function validate_anchor(anchor, task_index, anchor_index)
-  if type(anchor.line) ~= "number" then
+  if anchor.line and type(anchor.line) ~= "number" then
     return string.format("tasks[%d].anchors[%d].line must be a number", task_index, anchor_index)
   end
 
@@ -41,6 +106,44 @@ local function validate_anchor(anchor, task_index, anchor_index)
   end
 
   local path = string.format("tasks[%d].anchors[%d]", task_index, anchor_index)
+
+  if anchor.locator then
+    if type(anchor.locator) ~= "table" then
+      return path .. ".locator must be an object"
+    end
+
+    if anchor.locator.afterText and type(anchor.locator.afterText) ~= "string" then
+      return path .. ".locator.afterText must be a string"
+    end
+
+    if anchor.locator.beforeText and type(anchor.locator.beforeText) ~= "string" then
+      return path .. ".locator.beforeText must be a string"
+    end
+  end
+
+  if anchor.patch then
+    if type(anchor.patch) ~= "table" then
+      return path .. ".patch must be an object"
+    end
+
+    if anchor.patch.mode and type(anchor.patch.mode) ~= "string" then
+      return path .. ".patch.mode must be a string"
+    end
+
+    if anchor.patch.writeText then
+      local err = validate_string_list(anchor.patch.writeText, path .. ".patch.writeText")
+      if err then
+        return err
+      end
+    end
+  end
+
+  if anchor.writeText then
+    local err = validate_string_list(anchor.writeText, path .. ".writeText")
+    if err then
+      return err
+    end
+  end
 
   if anchor.doneWhen then
     local err = validate_string_list(anchor.doneWhen, path .. ".doneWhen")
@@ -89,8 +192,16 @@ function M.validate(plan)
     return "plan must be a JSON object"
   end
 
-  if plan.version ~= 1 then
-    return "plan.version must be 1"
+  if plan.version ~= 1 and plan.version ~= 2 then
+    return "plan.version must be 1 or 2"
+  end
+
+  if plan.version == 2 then
+    if type(plan.patches) ~= "table" then
+      return "plan.patches must be a list"
+    end
+
+    plan = M.normalize(plan)
   end
 
   if type(plan.tasks) ~= "table" then
@@ -109,6 +220,7 @@ end
 
 function M.load(path)
   local plan_path = path and path ~= "" and path or config.options.plan_path
+  local resolved_plan_path = util.resolve_existing_path(plan_path)
   local content, read_err = util.read_file(plan_path)
 
   if read_err then
@@ -128,8 +240,10 @@ function M.load(path)
     return false
   end
 
+  decoded = M.normalize(decoded)
   state.plan = decoded
   state.plan_path = plan_path
+  state.plan_root = plan_root_for(resolved_plan_path)
   state.cursor = { task = 1, anchor = 0 }
   state.index_tasks()
   persist.load()

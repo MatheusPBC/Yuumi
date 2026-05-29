@@ -1,4 +1,5 @@
 local config = require("yuumi.config")
+local locator = require("yuumi.locator")
 local state = require("yuumi.state")
 local util = require("yuumi.util")
 
@@ -92,8 +93,9 @@ function M.render_buffer(bufnr)
     local task = state.plan.tasks[task_index]
 
     for anchor_index, anchor in ipairs(task.anchors or {}) do
-      local start_line = util.clamp(anchor.line, 1, line_count) - 1
-      local end_line = util.clamp(anchor.endLine or anchor.line, 1, line_count)
+      local anchor_start, anchor_end = locator.range(bufnr, anchor)
+      local start_line = util.clamp(anchor_start, 1, line_count) - 1
+      local end_line = util.clamp(anchor_end, 1, line_count)
       local text = M.virtual_text(task, anchor)
 
       vim.api.nvim_buf_set_extmark(bufnr, state.namespace, start_line, 0, {
@@ -130,8 +132,8 @@ function M.anchor_at_cursor()
   for _, task_index in ipairs(task_indexes) do
     local task = state.plan.tasks[task_index]
     for anchor_index, anchor in ipairs(task.anchors or {}) do
-      local end_line = anchor.endLine or anchor.line
-      if row >= anchor.line and row <= end_line then
+      local start_line, end_line = locator.range(bufnr, anchor)
+      if row >= start_line and row <= end_line then
         return task, anchor, { task = task_index, anchor = anchor_index }
       end
     end

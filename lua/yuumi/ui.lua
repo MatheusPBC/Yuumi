@@ -116,6 +116,46 @@ function M.select_task(title, callback)
   end)
 end
 
+function M.select_file(title, callback)
+  if not state.plan then
+    util.notify("No plan loaded", vim.log.levels.WARN)
+    return
+  end
+
+  local items = {}
+  for task_index, task in ipairs(state.plan.tasks) do
+    table.insert(items, {
+      label = M.file_label(task),
+      task_index = task_index,
+      anchor_index = 1,
+    })
+  end
+
+  vim.ui.select(items, {
+    prompt = title or "Yuumi files",
+    format_item = function(item)
+      return item.label
+    end,
+  }, function(item)
+    if item then
+      callback(item.task_index, item.anchor_index)
+    end
+  end)
+end
+
+function M.file_label(task)
+  local total = #(task.anchors or {})
+  local pending = 0
+
+  for _, anchor in ipairs(task.anchors or {}) do
+    if not anchor.status or anchor.status == "pending" then
+      pending = pending + 1
+    end
+  end
+
+  return string.format("[%d/%d pending] %s", pending, total, task.file)
+end
+
 function M.task_label(task, anchor)
   return string.format(
     "[%s] %s:%d %s",

@@ -1,6 +1,7 @@
 local M = {
   plan = nil,
   plan_path = nil,
+  plan_root = nil,
   cursor = {
     task = 1,
     anchor = 1,
@@ -14,6 +15,7 @@ local M = {
 function M.reset()
   M.plan = nil
   M.plan_path = nil
+  M.plan_root = nil
   M.cursor = { task = 1, anchor = 1 }
   M.tasks_by_file = {}
   M.inline = nil

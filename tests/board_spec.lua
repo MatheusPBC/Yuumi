@@ -24,6 +24,64 @@ minit.test("builds board lines with plan files and current guidance", function()
   cleanup()
 end)
 
+minit.test("shows current file anchor details before global cursor details", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Multi file plan",
+    tasks = {
+      {
+        id = "lua-task",
+        file = "examples/sample.lua",
+        status = "pending",
+        summary = "Lua task",
+        anchors = {
+          {
+            id = "lua-anchor",
+            line = 1,
+            endLine = 2,
+            kind = "manual-edit",
+            guidance = "Edit Lua file",
+            writeText = { "local value = 1" },
+            doneWhen = { "Lua file changed" },
+          },
+        },
+      },
+      {
+        id = "html-task",
+        file = "examples/index.html",
+        status = "pending",
+        summary = "HTML task",
+        anchors = {
+          {
+            id = "html-anchor",
+            line = 1,
+            endLine = 2,
+            kind = "manual-edit",
+            guidance = "Edit HTML file",
+            writeText = { "<!doctype html>" },
+            doneWhen = { "HTML file changed" },
+          },
+        },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+  vim.cmd.edit(vim.uv.cwd() .. "/examples/index.html")
+
+  local text = table.concat(board.lines(), "\n")
+
+  minit.truthy(text:match("Current file"))
+  minit.truthy(text:match("examples/index%.html:1"))
+  minit.truthy(text:match("Edit HTML file"))
+  minit.eq(nil, text:match("Edit Lua file"))
+
+  cleanup()
+end)
+
 minit.test("renders writeText as exact lines to copy", function()
   cleanup()
 

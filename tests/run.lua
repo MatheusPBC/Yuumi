@@ -20,5 +20,6 @@ require("tests.path_spec")
 require("tests.load_spec")
 require("tests.board_spec")
 require("tests.plans_spec")
+require("tests.locator_spec")
 
 minit.run()

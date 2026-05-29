@@ -22,6 +22,8 @@ local function open_anchor(task_index, anchor_index)
   pcall(require("yuumi.board").open)
 end
 
+M.open = open_anchor
+
 function M.open_current()
   if not state.plan then
     util.notify("No plan loaded", vim.log.levels.WARN)
@@ -78,7 +80,7 @@ function M.prev()
 end
 
 function M.files()
-  ui.select_task("Yuumi files and anchors", open_anchor)
+  ui.select_file("Yuumi files", open_anchor)
 end
 
 function M.mark_status(status)

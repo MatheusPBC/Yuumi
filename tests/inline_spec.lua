@@ -101,6 +101,161 @@ minit.test("suggests next missing writeText line on an empty line", function()
   cleanup()
 end)
 
+minit.test("suggests next writeText line after a partially inserted multiline block", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Log plan",
+    tasks = {
+      {
+        id = "log-task",
+        file = "examples/sample.lua",
+        status = "pending",
+        summary = "Add log",
+        anchors = {
+          {
+            id = "log-anchor",
+            line = 1,
+            kind = "manual-edit",
+            guidance = "Add logger call",
+            writeText = {
+              "        logger.info(",
+              "            \"AppSync device command input\",",
+              "            extra={",
+              "                \"request_id\": request_id,",
+              "            },",
+              "        )",
+            },
+            doneWhen = { "Logger call is present" },
+          },
+        },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.index_tasks()
+  vim.cmd.edit(vim.uv.cwd() .. "/examples/sample.lua")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+    "        logger.info(",
+    "            ",
+  })
+  vim.api.nvim_win_set_cursor(0, { 2, 12 })
+
+  inline.refresh()
+
+  minit.truthy(state.inline)
+  inline.accept_current()
+
+  minit.eq("            \"AppSync device command input\",", vim.api.nvim_get_current_line())
+
+  cleanup()
+end)
+
+minit.test("does not restart multiline writeText when indentation differs", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Log plan",
+    tasks = {
+      {
+        id = "log-task",
+        file = "examples/sample.lua",
+        status = "pending",
+        summary = "Add log",
+        anchors = {
+          {
+            id = "log-anchor",
+            line = 1,
+            kind = "manual-edit",
+            guidance = "Add logger call",
+            writeText = {
+              "        logger.info(",
+              "            \"AppSync device command input\",",
+              "            extra={",
+            },
+            doneWhen = { "Logger call is present" },
+          },
+        },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.index_tasks()
+  vim.cmd.edit(vim.uv.cwd() .. "/examples/sample.lua")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+    "      logger.info(",
+    "      ",
+  })
+  vim.api.nvim_win_set_cursor(0, { 2, 6 })
+
+  inline.refresh()
+
+  minit.truthy(state.inline)
+  inline.accept_current()
+
+  minit.eq("      \"AppSync device command input\",", vim.api.nvim_get_current_line())
+
+  cleanup()
+end)
+
+minit.test("suggests guided patch writeText inside locator region", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Guided patch plan",
+    tasks = {
+      {
+        id = "log-task",
+        file = "examples/sample.lua",
+        status = "pending",
+        summary = "Add log",
+        anchors = {
+          {
+            id = "log-anchor",
+            line = 999,
+            kind = "guided-patch",
+            locator = {
+              afterText = "device_id, payload = _parse_input(event)",
+              beforeText = "device_lookup_id = device_id",
+            },
+            patch = {
+              mode = "insert-between",
+              writeText = {
+                "logger.info(",
+                "    \"parsed\",",
+                ")",
+              },
+            },
+            doneWhen = { "Logger call is present" },
+          },
+        },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.index_tasks()
+  vim.cmd.edit(vim.uv.cwd() .. "/examples/sample.lua")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+    "def lambda_handler(event, context):",
+    "    device_id, payload = _parse_input(event)",
+    "    ",
+    "    device_lookup_id = device_id",
+  })
+  vim.api.nvim_win_set_cursor(0, { 3, 4 })
+
+  inline.refresh()
+
+  minit.truthy(state.inline)
+  inline.accept_current()
+
+  minit.eq("    logger.info(", vim.api.nvim_get_current_line())
+
+  cleanup()
+end)
+
 minit.test("uses AI inline fallback when deterministic suggestions do not match", function()
   cleanup()
 

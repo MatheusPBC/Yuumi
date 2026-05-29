@@ -5,6 +5,15 @@ function M.root()
   return cwd or vim.fn.getcwd()
 end
 
+function M.plan_root()
+  local ok, state = pcall(require, "yuumi.state")
+  if ok and state.plan_root then
+    return state.plan_root
+  end
+
+  return M.root()
+end
+
 function M.join_path(...)
   return table.concat(vim.tbl_filter(function(part)
     return part and part ~= ""
@@ -20,17 +29,21 @@ function M.resolve_path(path)
     return path
   end
 
-  return M.join_path(M.root(), path)
+  return M.join_path(M.plan_root(), path)
 end
 
 function M.resolve_existing_path(path)
-  local resolved = M.resolve_path(path)
-  if resolved and vim.uv.fs_stat(resolved) then
-    return resolved
+  if not path or path == "" then
+    return nil
   end
 
-  if not path or path == "" or vim.startswith(path, "/") then
-    return resolved
+  if vim.startswith(path, "/") then
+    return path
+  end
+
+  local cwd_candidate = M.join_path(M.root(), path)
+  if vim.uv.fs_stat(cwd_candidate) then
+    return cwd_candidate
   end
 
   local buffer_path = vim.api.nvim_buf_get_name(0)
@@ -49,7 +62,12 @@ function M.resolve_existing_path(path)
     dir = parent
   end
 
-  return resolved
+  local plan_candidate = M.join_path(M.plan_root(), path)
+  if vim.uv.fs_stat(plan_candidate) then
+    return plan_candidate
+  end
+
+  return cwd_candidate
 end
 
 function M.read_file(path)
@@ -71,7 +89,7 @@ end
 
 function M.buf_relative_path(bufnr)
   local path = vim.api.nvim_buf_get_name(bufnr)
-  local root = M.root()
+  local root = M.plan_root()
 
   if vim.startswith(path, root .. "/") then
     return path:sub(#root + 2)

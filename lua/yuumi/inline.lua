@@ -2,11 +2,48 @@ local config = require("yuumi.config")
 local gpt = require("yuumi.gpt")
 local marks = require("yuumi.marks")
 local state = require("yuumi.state")
+local anchor_util = require("yuumi.anchor")
 
 local M = {}
 
 local function starts_with(value, prefix)
   return value:sub(1, #prefix) == prefix
+end
+
+local function trim(value)
+  return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function is_blank(value)
+  return trim(value) == ""
+end
+
+local function line_indent(value)
+  return (value or ""):match("^%s*") or ""
+end
+
+local function buffer_has_line(buffer_lines, expected)
+  local expected_trimmed = trim(expected)
+
+  for _, line in ipairs(buffer_lines) do
+    if line == expected or (expected_trimmed ~= "" and trim(line) == expected_trimmed) then
+      return true
+    end
+  end
+
+  return false
+end
+
+local function next_missing_write_line(write_text)
+  local buffer_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+
+  for _, line in ipairs(write_text) do
+    if not buffer_has_line(buffer_lines, line) then
+      return line
+    end
+  end
+
+  return nil
 end
 
 local function split_suffix(suffix)
@@ -49,7 +86,7 @@ local function ai_suggestion(task, anchor, prefix, row)
     prefix = prefix,
     nearbyLines = vim.api.nvim_buf_get_lines(0, start_line, end_line, false),
     guidance = anchor.guidance,
-    writeText = anchor.writeText,
+    writeText = anchor_util.write_text(anchor),
   })
 
   if not output or output == "" then
@@ -60,20 +97,30 @@ local function ai_suggestion(task, anchor, prefix, row)
 end
 
 local function find_suggestion(task, anchor, prefix, row)
-  local write_text = anchor.writeText or {}
+  local write_text = anchor_util.write_text(anchor)
+  local prefix_text = trim(prefix)
 
-  for _, line in ipairs(write_text) do
-    if prefix ~= "" and starts_with(line, prefix) and line ~= prefix then
-      return { insertText = line }, prefix
+  if prefix ~= "" and not is_blank(prefix) then
+    for _, line in ipairs(write_text) do
+      if starts_with(line, prefix) and line ~= prefix then
+        return { insertText = line }, prefix
+      end
+
+      local line_text = trim(line)
+      if starts_with(line_text, prefix_text) and line_text ~= prefix_text then
+        return { insertText = line_indent(prefix) .. line_text }, prefix
+      end
     end
   end
 
-  if prefix == "" then
-    local buffer_text = "\n" .. table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n") .. "\n"
-    for _, line in ipairs(write_text) do
-      if not buffer_text:find("\n" .. vim.pesc(line) .. "\n") then
-        return { insertText = line }, ""
+  if is_blank(prefix) then
+    local missing = next_missing_write_line(write_text)
+    if missing then
+      if prefix == "" then
+        return { insertText = missing }, ""
       end
+
+      return { insertText = prefix .. trim(missing) }, prefix
     end
   end
 
