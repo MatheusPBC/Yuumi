@@ -1,4 +1,5 @@
 local marks = require("yuumi.marks")
+local state = require("yuumi.state")
 local ui = require("yuumi.ui")
 local util = require("yuumi.util")
 local anchor_util = require("yuumi.anchor")
@@ -48,7 +49,12 @@ end
 function M.current_buffer()
   local task, anchor = marks.anchor_at_cursor()
   if not task or not anchor then
-    return nil, "No Yuumi anchor at cursor"
+    task = state.current_task()
+    anchor = state.current_anchor()
+  end
+
+  if not task or not anchor then
+    return nil, "No Yuumi task selected"
   end
 
   local expected_lines = anchor_util.write_text(anchor)

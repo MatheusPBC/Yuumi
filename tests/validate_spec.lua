@@ -50,3 +50,42 @@ minit.test("reports different lines that look close but do not match", function(
 
   cleanup()
 end)
+
+minit.test("validates the selected anchor when cursor is outside anchor range", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Active patch plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Add expected line",
+        anchors = {
+          {
+            id = "anchor",
+            line = 1,
+            writeText = { "local expected = 1" },
+          },
+        },
+      },
+    },
+  }
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+  vim.cmd.edit(vim.uv.cwd() .. "/examples/sample.lua")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+    "local expected = 1",
+    "local cursor_is_here = true",
+  })
+  vim.api.nvim_win_set_cursor(0, { 2, 0 })
+
+  local result, err = validate.current_buffer()
+
+  minit.eq(nil, err)
+  minit.eq(1, result.ok)
+  minit.eq("anchor", result.anchor.id)
+
+  cleanup()
+end)
