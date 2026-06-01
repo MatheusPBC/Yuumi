@@ -170,15 +170,22 @@ Notes:
 
 ## Plan Contract
 
-Prefer `version: 2` guided patch plans. They locate edit regions by context and
-do not depend on exact line numbers or exact indentation.
+Use `version: 2` guided patch plans as the default contract. A plan is a list of
+manual patches: where to find the edit, why it exists, how the final code should
+look, and how to confirm it is done. Guided patches locate edit regions by
+context and do not depend on exact line numbers or exact indentation.
 
-Guided patch example:
+Default shape:
 
 ```json
 {
   "version": 2,
   "title": "Add AppSync debug log",
+  "description": "Guide manual insertion of structured debug logs around AppSync command flow.",
+  "validation": [
+    "nvim --headless -u NONE -l tests/run.lua",
+    "git diff --check"
+  ],
   "patches": [
     {
       "file": "src/handlers/example/lambda_function.py",
@@ -201,6 +208,40 @@ Guided patch example:
 ```
 
 Yuumi normalizes v2 patches internally. Legacy line-based v1 plans are still supported.
+
+Default required fields:
+
+| Field | Purpose |
+| --- | --- |
+| `version` | Must be `2` for new plans. |
+| `title` | Short plan title shown in the board. |
+| `patches[]` | Ordered list of manual patches. |
+| `patches[].id` | Stable lowercase slug for the patch. |
+| `patches[].file` | Target file path relative to project root. |
+| `patches[].summary` | Short label shown in pickers and board. |
+| `patches[].locator.afterText` | Existing line before the insertion region. |
+| `patches[].locator.beforeText` | Existing line after the insertion region. |
+| `patches[].reason` | Why this patch exists. |
+| `patches[].guidance` | Human instruction for executing the patch. |
+| `patches[].insert` | Final lines the developer should type manually. |
+| `patches[].doneWhen` | Concrete checks for considering the patch complete. |
+
+Useful optional fields:
+
+| Field | Purpose |
+| --- | --- |
+| `description` | Longer context for the whole plan. |
+| `tags` | Search/filter labels for external agents. |
+| `priority` | Plan priority, for example `low`, `medium`, or `high`. |
+| `risk` | Risk hint, for example `low`, `medium`, or `high`. |
+| `validation` | Commands or manual checks to run after completing the plan. |
+| `patches[].inlineSuggestions` | Optional deterministic completion triggers. |
+
+Avoid in new plans:
+
+- `line` / `endLine` as the primary locator; use them only as fallback.
+- `tasks[].anchors[]`; it is legacy v1 shape.
+- Generic `steps`, `todo`, or prose-only plans without `locator` and `insert`.
 
 Legacy v1 `.agent/current-plan.json` shape:
 
@@ -241,7 +282,7 @@ Legacy v1 `.agent/current-plan.json` shape:
 }
 ```
 
-Important fields:
+Legacy v1 fields:
 
 | Field | Purpose |
 | --- | --- |
@@ -260,17 +301,20 @@ Important fields:
 
 `:YuumiBoard` opens a floating panel on the right side of the editor. It shows:
 
-- plan title
-- files and anchors
-- active anchor status
-- file and line
-- explanation and instruction
-- `Como deve ficar:` block from `writeText`
-- done criteria
+- plan title and progress summary
+- `Arquivos`: target files, compact paths, patch counts, and anchor status
+- `Patch atual`: active file, line, status, and summary
+- `Por que`: patch reason
+- `Fazer`: execution guidance
+- `Codigo esperado`: exact lines from `writeText`
+- `Checklist`: done criteria
+- `Plano`: execution queue with the current patch and next pending patches
 
 The main buffer only shows a compact `patch aqui` marker. The board is meant to
 be the execution guide, while the developer still types or accepts code
 manually.
+
+Board status labels are highlighted by state: pending, done, stale, and skipped.
 
 ## Inline Guidance
 

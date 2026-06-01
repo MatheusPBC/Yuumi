@@ -7,10 +7,54 @@ local util = require("yuumi.util")
 local M = {
   win = nil,
   buf = nil,
+  namespace = vim.api.nvim_create_namespace("yuumi-board"),
 }
+
+local STATUS_HIGHLIGHTS = {
+  done = "YuumiBoardDone",
+  pending = "YuumiBoardPending",
+  skipped = "YuumiBoardMuted",
+  stale = "YuumiBoardStale",
+}
+
+local function section(lines, title)
+  table.insert(lines, "")
+  table.insert(lines, "= " .. title .. " =")
+end
+
+local function short_path(path)
+  if #path <= 36 then
+    return path
+  end
+
+  local parts = vim.split(path, "/", { plain = true })
+  if #parts >= 2 then
+    return ".../" .. parts[#parts - 1] .. "/" .. parts[#parts]
+  end
+
+  return "..." .. path:sub(#path - 32)
+end
 
 local function status_for(anchor)
   return status.for_anchor(0, anchor)
+end
+
+local function status_icon(current_status)
+  if current_status == "done" then
+    return "✓"
+  end
+  if current_status == "stale" then
+    return "!"
+  end
+  if current_status == "skipped" then
+    return "-"
+  end
+  return "●"
+end
+
+local function status_label(anchor)
+  local current_status = status_for(anchor)
+  return status_icon(current_status) .. " " .. current_status
 end
 
 local function current_anchor()
@@ -42,8 +86,7 @@ local function current_file_anchor()
     end
   end
 
-  local task = state.plan.tasks[task_indexes[1]]
-  return task, task and task.anchors and task.anchors[1]
+  return nil, nil
 end
 
 local function add_anchor_details(lines, title, task, anchor)
@@ -51,47 +94,153 @@ local function add_anchor_details(lines, title, task, anchor)
     return
   end
 
-  table.insert(lines, "")
-  table.insert(lines, title)
+  section(lines, title)
   local start_line = locator.range(0, anchor)
-  table.insert(lines, "  Arquivo: " .. task.file)
+  table.insert(lines, "  Arquivo: " .. short_path(task.file))
   table.insert(lines, "  Linha: " .. start_line)
-  table.insert(lines, "  Status: " .. status_for(anchor))
+  table.insert(lines, "  Status: " .. status_label(anchor))
   table.insert(lines, "  Resumo: " .. (task.summary or anchor.guidance or task.id or "planned edit"))
 
   if anchor.reason then
-    table.insert(lines, "")
-    table.insert(lines, "Explicacao:")
+    section(lines, "Por que")
     table.insert(lines, "  " .. anchor.reason)
   end
 
   if anchor.guidance then
-    table.insert(lines, "")
-    table.insert(lines, "Instrucao:")
+    section(lines, "Fazer")
     table.insert(lines, "  " .. anchor.guidance)
   end
 
   local write_text = anchor_util.write_text(anchor)
   if #write_text > 0 then
-    table.insert(lines, "")
-    table.insert(lines, "Como deve ficar:")
+    section(lines, "Codigo esperado")
     for _, item in ipairs(write_text) do
       table.insert(lines, "  " .. item)
     end
   end
 
   if anchor.removeText then
-    table.insert(lines, "")
-    table.insert(lines, "Remove:")
+    section(lines, "Remover")
     table.insert(lines, "  " .. anchor.removeText)
   end
 
   if anchor.doneWhen then
-    table.insert(lines, "")
-    table.insert(lines, "Done when:")
+    section(lines, "Checklist")
     for _, item in ipairs(anchor.doneWhen) do
       table.insert(lines, "  - " .. item)
     end
+  end
+end
+
+local function progress_counts()
+  local counts = { total = 0, done = 0, pending = 0, stale = 0, skipped = 0 }
+
+  for _, task in ipairs(state.plan.tasks or {}) do
+    for _, anchor in ipairs(task.anchors or {}) do
+      local current_status = status_for(anchor)
+      counts.total = counts.total + 1
+      counts[current_status] = (counts[current_status] or 0) + 1
+    end
+  end
+
+  return counts
+end
+
+local function add_files(lines)
+  section(lines, "Arquivos")
+  for task_index, task in ipairs(state.plan.tasks or {}) do
+    local pending = 0
+    local total = #(task.anchors or {})
+
+    for _, anchor in ipairs(task.anchors or {}) do
+      if status_for(anchor) == "pending" then
+        pending = pending + 1
+      end
+    end
+
+    table.insert(lines, string.format("  %d. %s  %d/%d", task_index, short_path(task.file), pending, total))
+    for anchor_index, anchor in ipairs(task.anchors or {}) do
+      local marker = task_index == state.cursor.task and anchor_index == state.cursor.anchor and ">" or " "
+      local start_line = locator.range(0, anchor)
+      table.insert(lines, string.format("   %s %s L%d %s", marker, status_label(anchor), start_line, anchor.id or task.summary or "patch"))
+    end
+  end
+end
+
+local function queue_items()
+  local items = {}
+
+  for task_index, task in ipairs(state.plan.tasks or {}) do
+    for anchor_index, anchor in ipairs(task.anchors or {}) do
+      if status_for(anchor) == "pending" then
+        table.insert(items, {
+          task_index = task_index,
+          anchor_index = anchor_index,
+          anchor = anchor,
+          label = anchor.id or task.summary or "patch",
+        })
+      end
+    end
+  end
+
+  return items
+end
+
+local function add_plan_queue(lines)
+  local items = queue_items()
+  if #items == 0 then
+    return
+  end
+
+  section(lines, "Plano")
+  for index, item in ipairs(items) do
+    if item.task_index == state.cursor.task and item.anchor_index == state.cursor.anchor then
+      table.insert(lines, "  ▶ current  " .. item.label)
+    elseif index <= 5 then
+      table.insert(lines, "  ○ next     " .. item.label)
+    end
+  end
+end
+
+local function add_highlight(buf, row, from_text, group)
+  local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+  if not line then
+    return
+  end
+
+  local start_col = line:find(from_text, 1, true)
+  if not start_col then
+    return
+  end
+
+  vim.api.nvim_buf_set_extmark(buf, M.namespace, row, start_col - 1, {
+    end_col = start_col - 1 + #from_text,
+    hl_group = group,
+  })
+end
+
+local function highlight_line(buf, row, line)
+  if line:match("^= .+ =$") then
+    vim.api.nvim_buf_add_highlight(buf, M.namespace, "YuumiBoardSection", row, 0, -1)
+  end
+
+  for current_status, group in pairs(STATUS_HIGHLIGHTS) do
+    add_highlight(buf, row, current_status, group)
+  end
+
+  add_highlight(buf, row, "Status:", "YuumiBoardKey")
+  add_highlight(buf, row, "Arquivo:", "YuumiBoardKey")
+  add_highlight(buf, row, "Linha:", "YuumiBoardKey")
+  add_highlight(buf, row, "Resumo:", "YuumiBoardKey")
+  add_highlight(buf, row, "current", "YuumiBoardPending")
+  add_highlight(buf, row, "next", "YuumiBoardMuted")
+end
+
+local function apply_highlights(buf)
+  vim.api.nvim_buf_clear_namespace(buf, M.namespace, 0, -1)
+
+  for row, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
+    highlight_line(buf, row - 1, line)
   end
 end
 
@@ -114,20 +263,14 @@ function M.lines()
   local lines = {
     "Yuumi Plan",
     state.plan.title or "untitled",
-    "",
-    "Files",
   }
 
-  for task_index, task in ipairs(state.plan.tasks or {}) do
-    table.insert(lines, string.format("  %d. %s", task_index, task.file))
-    for anchor_index, anchor in ipairs(task.anchors or {}) do
-      local marker = task_index == state.cursor.task and anchor_index == state.cursor.anchor and ">" or " "
-      local start_line = locator.range(0, anchor)
-      table.insert(lines, string.format("   %s [%s] L%d %s", marker, status_for(anchor), start_line, task.summary or anchor.guidance or anchor.id))
-    end
-  end
+  local counts = progress_counts()
+  table.insert(lines, string.format("%d patches · %d done · %d pending · %d stale · %d skipped", counts.total, counts.done, counts.pending, counts.stale, counts.skipped))
 
+  add_files(lines)
   add_current_details(lines)
+  add_plan_queue(lines)
   return lines
 end
 
@@ -137,6 +280,15 @@ function M.close()
   end
   M.win = nil
   M.buf = nil
+end
+
+function M.setup_highlights()
+  vim.api.nvim_set_hl(0, "YuumiBoardSection", { default = true, fg = "#56d4dd", bold = true })
+  vim.api.nvim_set_hl(0, "YuumiBoardKey", { default = true, fg = "#61afef" })
+  vim.api.nvim_set_hl(0, "YuumiBoardPending", { default = true, fg = "#e5c07b" })
+  vim.api.nvim_set_hl(0, "YuumiBoardDone", { default = true, fg = "#98c379" })
+  vim.api.nvim_set_hl(0, "YuumiBoardStale", { default = true, fg = "#e06c75" })
+  vim.api.nvim_set_hl(0, "YuumiBoardMuted", { default = true, fg = "#7f8da3" })
 end
 
 function M.open()
@@ -152,8 +304,9 @@ function M.open()
   end
 
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, M.lines())
+  apply_highlights(M.buf)
 
-  local width = math.min(44, math.max(32, math.floor(vim.o.columns * 0.28)))
+  local width = math.min(64, math.max(52, math.floor(vim.o.columns * 0.34)))
   local height = math.min(#M.lines(), math.max(12, vim.o.lines - 6))
 
   if M.win and vim.api.nvim_win_is_valid(M.win) then
@@ -185,6 +338,7 @@ function M.refresh()
   end
 
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, M.lines())
+  apply_highlights(M.buf)
 end
 
 return M

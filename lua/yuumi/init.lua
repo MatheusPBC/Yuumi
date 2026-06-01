@@ -9,6 +9,7 @@ local M = {}
 function M.setup(opts)
   config.setup(opts)
   marks.setup_highlights()
+  board.setup_highlights()
   commands.create()
 
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost" }, {

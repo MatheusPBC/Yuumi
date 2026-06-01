@@ -50,8 +50,10 @@ COMMANDS                                                *yuumi-commands*
                                                         *:YuumiBoard*
 :YuumiBoard
   Show a floating guidance board on the right side of the editor. The board
-  lists plan files, patches, current status, explanation, expected code, and
-  done criteria for the active patch.
+  lists plan files, progress, current status, explanation, expected code, and
+  done criteria for the active patch. Its main sections are Arquivos,
+  Patch atual, Por que, Fazer, Codigo esperado, Checklist, and Plano. Status
+  labels are highlighted by state: pending, done, stale, and skipped.
 
                                                         *:YuumiFiles*
 :YuumiFiles
@@ -139,24 +141,39 @@ variables such as OPENAI_API_KEY or delegate to OpenCode/local wrappers.
 
 PLAN CONTRACT                                      *yuumi-plan-contract*
 
-Prefer version 2 guided patch plans. They locate edit regions by context:
+Use version 2 guided patch plans as the default contract. A plan is a list of
+manual patches: where to find the edit, why it exists, how the final code should
+look, and how to confirm it is done.
 >
   {
     "version": 2,
     "title": "Add debug logs",
+    "description": "Guide manual insertion of structured debug logs.",
+    "validation": ["nvim --headless -u NONE -l tests/run.lua", "git diff --check"],
     "patches": [
       {
         "id": "log-after-parse-input",
         "file": "src/example.py",
+        "summary": "Add a structured log after input parsing.",
         "locator": {
           "afterText": "device_id, payload = _parse_input(event)",
           "beforeText": "device_lookup_id = device_id"
         },
-        "insert": ["logger.info(\"parsed\")"]
+        "reason": "Capture sanitized command context after parsing.",
+        "guidance": "Insert this log between parsing and device lookup.",
+        "insert": ["logger.info(\"parsed\")"],
+        "doneWhen": ["The log is between parsing and lookup"]
       }
     ]
   }
 <
+
+Required v2 patch fields are id, file, summary, locator.afterText,
+locator.beforeText, reason, guidance, insert, and doneWhen. Optional top-level
+fields include description, tags, priority, risk, and validation.
+
+Avoid line/endLine as primary locators in new plans. They remain useful only as
+fallback when textual context is not reliable.
 
 Yuumi normalizes v2 patches internally. Line-based legacy anchors are still
 supported.
