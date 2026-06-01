@@ -102,6 +102,7 @@ To check your progress:
 | `:YuumiFiles` | Pick a target file from the currently loaded plan. |
 | `:YuumiNext` / `:YuumiPrev` | Navigate through anchors. |
 | `:YuumiBoard` | Show the right-side guidance board. |
+| `:YuumiBoardZoom` | Toggle the board between normal and large size. |
 | `:YuumiHover` | Show guidance for the current anchor. |
 | `:YuumiStatus` | Show current plan progress. |
 | `:YuumiValidate` | Validate current buffer against active anchor `writeText`. |
@@ -315,6 +316,8 @@ be the execution guide, while the developer still types or accepts code
 manually.
 
 Board status labels are highlighted by state: pending, done, stale, and skipped.
+Use `:YuumiBoardZoom` when you need more horizontal room for long paths,
+instructions, or planned code.
 
 ## Inline Guidance
 

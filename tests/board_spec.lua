@@ -76,7 +76,7 @@ minit.test("shows current file anchor details before global cursor details", fun
 
   minit.truthy(text:match("Patch atual"))
   minit.truthy(text:match("Arquivo: examples/index%.html"))
-  minit.truthy(text:match("Linha: 1"))
+  minit.truthy(text:match("Linhas alvo: 1%-2"))
   minit.truthy(text:match("Edit HTML file"))
   minit.eq(nil, text:match("Edit Lua file"))
 
@@ -171,12 +171,47 @@ minit.test("renders current patch as board-first execution guide", function()
 
   minit.truthy(text:match("Patch atual"))
   minit.truthy(text:match("Arquivo: examples/sample%.lua"))
-  minit.truthy(text:match("Linha: 4"))
+  minit.truthy(text:match("Linhas alvo: 4%-6"))
   minit.truthy(text:match("Status: ● pending"))
   minit.truthy(text:match("= Por que ="))
   minit.truthy(text:match("Show command dispatch inputs%."))
   minit.truthy(text:match("= Codigo esperado ="))
   minit.truthy(text:match("logger%.info%("))
+
+  cleanup()
+end)
+
+minit.test("renders current patch target line range", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Line range plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Add block",
+        anchors = {
+          {
+            id = "patch",
+            line = 8,
+            endLine = 12,
+            guidance = "Replace block",
+            writeText = { "local value = 1" },
+          },
+        },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+
+  local text = table.concat(board.lines(), "\n")
+
+  minit.truthy(text:match("Linhas alvo: 8%-12"))
+  minit.eq(nil, text:match("Linha: 8"))
 
   cleanup()
 end)
@@ -262,6 +297,47 @@ minit.test("opens a wider board window", function()
 
   board.close()
   vim.o.columns = original_columns
+  cleanup()
+end)
+
+minit.test("toggles board zoom size", function()
+  cleanup()
+
+  local original_columns = vim.o.columns
+  local original_lines = vim.o.lines
+  vim.o.columns = 120
+  vim.o.lines = 40
+  state.plan = {
+    version = 1,
+    title = "Zoom board plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Task",
+        anchors = { { id = "anchor", line = 1, writeText = { "local value = 1" } } },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+
+  board.open()
+  local normal_config = vim.api.nvim_win_get_config(board.win)
+  board.toggle_zoom()
+  local zoom_config = vim.api.nvim_win_get_config(board.win)
+  board.toggle_zoom()
+  local restored_config = vim.api.nvim_win_get_config(board.win)
+
+  minit.eq(52, normal_config.width)
+  minit.eq(96, zoom_config.width)
+  minit.eq(34, zoom_config.height)
+  minit.eq(52, restored_config.width)
+
+  board.close()
+  vim.o.columns = original_columns
+  vim.o.lines = original_lines
   cleanup()
 end)
 

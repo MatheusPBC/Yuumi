@@ -8,6 +8,7 @@ local M = {
   win = nil,
   buf = nil,
   namespace = vim.api.nvim_create_namespace("yuumi-board"),
+  zoomed = false,
 }
 
 local STATUS_HIGHLIGHTS = {
@@ -95,9 +96,13 @@ local function add_anchor_details(lines, title, task, anchor)
   end
 
   section(lines, title)
-  local start_line = locator.range(0, anchor)
+  local start_line, end_line = locator.range(0, anchor)
   table.insert(lines, "  Arquivo: " .. short_path(task.file))
-  table.insert(lines, "  Linha: " .. start_line)
+  if end_line and end_line ~= start_line then
+    table.insert(lines, string.format("  Linhas alvo: %d-%d", start_line, end_line))
+  else
+    table.insert(lines, "  Linha alvo: " .. start_line)
+  end
   table.insert(lines, "  Status: " .. status_label(anchor))
   table.insert(lines, "  Resumo: " .. (task.summary or anchor.guidance or task.id or "planned edit"))
 
@@ -230,10 +235,36 @@ local function highlight_line(buf, row, line)
 
   add_highlight(buf, row, "Status:", "YuumiBoardKey")
   add_highlight(buf, row, "Arquivo:", "YuumiBoardKey")
-  add_highlight(buf, row, "Linha:", "YuumiBoardKey")
+  add_highlight(buf, row, "Linha alvo:", "YuumiBoardKey")
+  add_highlight(buf, row, "Linhas alvo:", "YuumiBoardKey")
   add_highlight(buf, row, "Resumo:", "YuumiBoardKey")
   add_highlight(buf, row, "current", "YuumiBoardPending")
   add_highlight(buf, row, "next", "YuumiBoardMuted")
+end
+
+local function window_size()
+  if M.zoomed then
+    local width = math.min(vim.o.columns - 4, math.max(64, math.floor(vim.o.columns * 0.8)))
+    local height = math.min(vim.o.lines - 6, math.max(16, math.floor(vim.o.lines * 0.85)))
+    return width, height
+  end
+
+  local width = math.min(64, math.max(52, math.floor(vim.o.columns * 0.34)))
+  local height = math.min(#M.lines(), math.max(12, vim.o.lines - 6))
+  return width, height
+end
+
+local function window_config(width, height)
+  return {
+    relative = "editor",
+    row = 2,
+    col = vim.o.columns - width - 2,
+    width = width,
+    height = height,
+    border = "rounded",
+    title = M.zoomed and " Yuumi Zoom " or " Yuumi ",
+    style = "minimal",
+  }
 end
 
 local function apply_highlights(buf)
@@ -306,30 +337,19 @@ function M.open()
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, M.lines())
   apply_highlights(M.buf)
 
-  local width = math.min(64, math.max(52, math.floor(vim.o.columns * 0.34)))
-  local height = math.min(#M.lines(), math.max(12, vim.o.lines - 6))
+  local width, height = window_size()
 
   if M.win and vim.api.nvim_win_is_valid(M.win) then
-    vim.api.nvim_win_set_config(M.win, {
-      relative = "editor",
-      row = 2,
-      col = vim.o.columns - width - 2,
-      width = width,
-      height = height,
-    })
+    vim.api.nvim_win_set_config(M.win, window_config(width, height))
     return
   end
 
-  M.win = vim.api.nvim_open_win(M.buf, false, {
-    relative = "editor",
-    row = 2,
-    col = vim.o.columns - width - 2,
-    width = width,
-    height = height,
-    border = "rounded",
-    title = " Yuumi ",
-    style = "minimal",
-  })
+  M.win = vim.api.nvim_open_win(M.buf, false, window_config(width, height))
+end
+
+function M.toggle_zoom()
+  M.zoomed = not M.zoomed
+  M.open()
 end
 
 function M.refresh()

@@ -55,6 +55,11 @@ COMMANDS                                                *yuumi-commands*
   Patch atual, Por que, Fazer, Codigo esperado, Checklist, and Plano. Status
   labels are highlighted by state: pending, done, stale, and skipped.
 
+                                                        *:YuumiBoardZoom*
+:YuumiBoardZoom
+  Toggle the guidance board between normal and large size. Use it when long
+  paths, instructions, or planned code need more horizontal room.
+
                                                         *:YuumiFiles*
 :YuumiFiles
   List target files from the currently loaded plan using vim.ui.select. Each

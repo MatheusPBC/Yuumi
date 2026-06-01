@@ -104,6 +104,10 @@ function M.create()
     board.open()
   end, { desc = "Show Yuumi guidance board", force = true })
 
+  vim.api.nvim_create_user_command("YuumiBoardZoom", function()
+    board.toggle_zoom()
+  end, { desc = "Toggle Yuumi board zoom", force = true })
+
   vim.api.nvim_create_user_command("YuumiDone", function()
     nav.mark_status("done")
   end, { desc = "Mark current Yuumi anchor as done", force = true })
