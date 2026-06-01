@@ -1,6 +1,7 @@
 local state = require("yuumi.state")
 local anchor_util = require("yuumi.anchor")
 local locator = require("yuumi.locator")
+local status = require("yuumi.status")
 local util = require("yuumi.util")
 
 local M = {
@@ -9,7 +10,7 @@ local M = {
 }
 
 local function status_for(anchor)
-  return anchor.status or "pending"
+  return status.for_anchor(0, anchor)
 end
 
 local function current_anchor()
@@ -34,7 +35,7 @@ local function current_file_anchor()
   for _, task_index in ipairs(task_indexes) do
     local task = state.plan.tasks[task_index]
     for _, anchor in ipairs(task.anchors or {}) do
-      local start_line, end_line = locator.range(0, anchor)
+      local start_line, end_line = locator.active_range(0, anchor)
       if row >= start_line and row <= end_line then
         return task, anchor
       end
@@ -53,19 +54,27 @@ local function add_anchor_details(lines, title, task, anchor)
   table.insert(lines, "")
   table.insert(lines, title)
   local start_line = locator.range(0, anchor)
-  table.insert(lines, "  " .. task.file .. ":" .. start_line)
-  table.insert(lines, "  " .. (task.summary or anchor.guidance or task.id or "planned edit"))
+  table.insert(lines, "  Arquivo: " .. task.file)
+  table.insert(lines, "  Linha: " .. start_line)
+  table.insert(lines, "  Status: " .. status_for(anchor))
+  table.insert(lines, "  Resumo: " .. (task.summary or anchor.guidance or task.id or "planned edit"))
+
+  if anchor.reason then
+    table.insert(lines, "")
+    table.insert(lines, "Explicacao:")
+    table.insert(lines, "  " .. anchor.reason)
+  end
 
   if anchor.guidance then
     table.insert(lines, "")
-    table.insert(lines, "Write:")
+    table.insert(lines, "Instrucao:")
     table.insert(lines, "  " .. anchor.guidance)
   end
 
   local write_text = anchor_util.write_text(anchor)
   if #write_text > 0 then
     table.insert(lines, "")
-    table.insert(lines, "Write exactly:")
+    table.insert(lines, "Como deve ficar:")
     for _, item in ipairs(write_text) do
       table.insert(lines, "  " .. item)
     end
@@ -89,12 +98,12 @@ end
 local function add_current_details(lines)
   local file_task, file_anchor = current_file_anchor()
   if file_task and file_anchor then
-    add_anchor_details(lines, "Current file", file_task, file_anchor)
+    add_anchor_details(lines, "Patch atual", file_task, file_anchor)
     return
   end
 
   local task, anchor = current_anchor()
-  add_anchor_details(lines, "Current", task, anchor)
+  add_anchor_details(lines, "Patch atual", task, anchor)
 end
 
 function M.lines()
@@ -113,7 +122,8 @@ function M.lines()
     table.insert(lines, string.format("  %d. %s", task_index, task.file))
     for anchor_index, anchor in ipairs(task.anchors or {}) do
       local marker = task_index == state.cursor.task and anchor_index == state.cursor.anchor and ">" or " "
-      table.insert(lines, string.format("   %s [%s] L%d %s", marker, status_for(anchor), anchor.line, task.summary or anchor.guidance or anchor.id))
+      local start_line = locator.range(0, anchor)
+      table.insert(lines, string.format("   %s [%s] L%d %s", marker, status_for(anchor), start_line, task.summary or anchor.guidance or anchor.id))
     end
   end
 

@@ -1,6 +1,8 @@
+local locator = require("yuumi.locator")
 local marks = require("yuumi.marks")
 local persist = require("yuumi.persist")
 local state = require("yuumi.state")
+local status_util = require("yuumi.status")
 local ui = require("yuumi.ui")
 local util = require("yuumi.util")
 
@@ -17,7 +19,8 @@ local function open_anchor(task_index, anchor_index)
 
   state.cursor = { task = task_index, anchor = anchor_index }
   vim.cmd.edit(vim.fn.fnameescape(util.resolve_path(task.file)))
-  vim.api.nvim_win_set_cursor(0, { anchor.line, 0 })
+  local start_line = locator.range(0, anchor)
+  vim.api.nvim_win_set_cursor(0, { start_line, 0 })
   marks.render_buffer(0)
   pcall(require("yuumi.board").open)
 end
@@ -94,6 +97,11 @@ function M.mark_status(status)
 
   if not task or not anchor then
     util.notify("No Yuumi task selected", vim.log.levels.WARN)
+    return
+  end
+
+  if status == "done" and not status_util.has_expected_text(0, anchor) then
+    util.notify("Cannot mark done: expected Yuumi text is missing", vim.log.levels.WARN)
     return
   end
 

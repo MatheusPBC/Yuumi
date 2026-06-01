@@ -167,3 +167,35 @@ minit.test("Yuumi command opens patch picker when a plan is loaded", function()
   vim.ui.select = original_select
   minit.eq("Yuumi patches", selected_prompt)
 end)
+
+minit.test("done status is not persisted when writeText is missing", function()
+  state.reset()
+  state.plan = {
+    version = 1,
+    title = "Done guard plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Add line",
+        anchors = {
+          {
+            id = "anchor",
+            line = 1,
+            writeText = { "local expected = 1" },
+          },
+        },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+  vim.cmd.edit(vim.uv.cwd() .. "/examples/sample.lua")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, { "local actual = 2" })
+  vim.api.nvim_win_set_cursor(0, { 1, 0 })
+
+  nav.mark_status("done")
+
+  minit.eq(nil, state.plan.tasks[1].anchors[1].status)
+end)

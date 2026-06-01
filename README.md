@@ -4,15 +4,15 @@ Yuumi is a plan-guided pair programming layer for Neovim.
 
 It does not generate plans and does not auto-apply patches. An external agent,
 such as OpenCode, writes a JSON plan. Yuumi turns that plan into navigation,
-buffer marks, a right-side guidance board, inline ghost text, validation, and
+minimal buffer markers, a right-side guidance board, inline ghost text, validation, and
 optional AI fallback through an external CLI.
 
 ## What It Does
 
 - Loads `.agent/current-plan.json` or any JSON plan path.
-- Marks planned edit regions in the target buffers.
-- Shows a right-side board with files, anchors, instructions, `writeText`, and
-  done criteria.
+- Marks patch locations in the target buffers with compact `patch aqui` text.
+- Shows a right-side board with files, patches, status, explanation, expected
+  code, and done criteria.
 - Suggests ghost text from `writeText` without requiring exact trigger words.
 - Falls back to deterministic `inlineSuggestions` when configured.
 - Optionally calls an external AI command for inline suggestions.
@@ -149,7 +149,7 @@ require("yuumi").setup({
   highlight_group = "YuumiAnchor",
   virtual_text_prefix = "yuumi: ",
   virtual_text_pos = "right_align",
-  show_virtual_lines = true,
+  show_virtual_lines = false,
   open_files_on_load = true,
   inline_debounce_ms = 80,
   inline_ai_enabled = false,
@@ -161,6 +161,8 @@ require("yuumi").setup({
 Notes:
 
 - `virtual_text_pos = "right_align"` keeps guidance away from code text.
+- `show_virtual_lines = false` keeps the main buffer clean; the board carries
+  the full plan details.
 - `open_files_on_load = true` opens the board and task picker after explicit path loads. Plain `:YuumiLoad` opens the plan picker first.
 - `inline_ai_enabled = false` keeps AI calls off unless explicitly enabled.
 - `gpt_command` is any executable command that receives JSON on stdin and
@@ -262,12 +264,13 @@ Important fields:
 - files and anchors
 - active anchor status
 - file and line
-- guidance
-- `Write exactly:` block from `writeText`
+- explanation and instruction
+- `Como deve ficar:` block from `writeText`
 - done criteria
 
-The board is meant to remove guesswork. The developer still types or accepts
-code manually.
+The main buffer only shows a compact `patch aqui` marker. The board is meant to
+be the execution guide, while the developer still types or accepts code
+manually.
 
 ## Inline Guidance
 

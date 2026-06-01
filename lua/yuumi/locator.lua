@@ -21,7 +21,8 @@ local function find_line(lines, expected, start_index, stop_index)
   return nil
 end
 
-local function guided_range(bufnr, anchor)
+local function guided_range(bufnr, anchor, opts)
+  opts = opts or {}
   local locator = anchor.locator or {}
   if not locator.afterText and not locator.beforeText then
     return nil, nil
@@ -40,8 +41,12 @@ local function guided_range(bufnr, anchor)
     return nil, nil
   end
 
-  if after_line and before_line then
+  if after_line and before_line and opts.active then
     return after_line + 1, math.max(after_line + 1, before_line - 1)
+  end
+
+  if after_line and before_line then
+    return before_line, before_line
   end
 
   if after_line then
@@ -68,6 +73,17 @@ function M.range(bufnr, anchor)
   start_line = anchor.line or 1
   end_line = math.max(anchor.endLine or start_line, start_line + #anchor_util.write_text(anchor) - 1)
   return start_line, end_line
+end
+
+function M.active_range(bufnr, anchor)
+  bufnr = bufnr or 0
+
+  local start_line, end_line = guided_range(bufnr, anchor, { active = true })
+  if start_line and end_line then
+    return start_line, end_line
+  end
+
+  return M.range(bufnr, anchor)
 end
 
 return M

@@ -1,6 +1,7 @@
 local config = require("yuumi.config")
 local locator = require("yuumi.locator")
 local state = require("yuumi.state")
+local status = require("yuumi.status")
 local util = require("yuumi.util")
 
 local M = {}
@@ -8,17 +9,19 @@ local M = {}
 local status_highlights = {
   pending = "YuumiAnchorPending",
   done = "YuumiAnchorDone",
+  stale = "YuumiAnchorStale",
   skipped = "YuumiAnchorSkipped",
 }
 
 local status_labels = {
   pending = "pending",
   done = "done",
+  stale = "stale",
   skipped = "skipped",
 }
 
-local function status_for(anchor)
-  return status_labels[anchor.status] or "pending"
+local function status_for(bufnr, anchor)
+  return status_labels[status.for_anchor(bufnr, anchor)] or "pending"
 end
 
 local function summary_for(task, anchor)
@@ -32,19 +35,30 @@ function M.setup_highlights()
   })
   vim.api.nvim_set_hl(0, "YuumiAnchorPending", { default = true, bg = "#2d3328" })
   vim.api.nvim_set_hl(0, "YuumiAnchorDone", { default = true, bg = "#1f3a2d" })
+  vim.api.nvim_set_hl(0, "YuumiAnchorStale", { default = true, bg = "#3a2525" })
   vim.api.nvim_set_hl(0, "YuumiAnchorSkipped", { default = true, bg = "#3a2f1f" })
 end
 
-function M.highlight_group(anchor)
-  return status_highlights[anchor.status] or status_highlights.pending
+function M.highlight_group(bufnr, anchor)
+  if not anchor then
+    anchor = bufnr
+    bufnr = 0
+  end
+
+  return status_highlights[status.for_anchor(bufnr, anchor)] or status_highlights.pending
 end
 
-function M.virtual_text(task, anchor)
+function M.virtual_text(bufnr, task, anchor)
+  if not anchor then
+    anchor = task
+    task = bufnr
+    bufnr = 0
+  end
+
   return string.format(
-    "%s[%s] %s",
+    "%s[%s] patch aqui",
     config.options.virtual_text_prefix,
-    status_for(anchor),
-    summary_for(task, anchor)
+    status_for(bufnr, anchor)
   )
 end
 
@@ -96,11 +110,11 @@ function M.render_buffer(bufnr)
       local anchor_start, anchor_end = locator.range(bufnr, anchor)
       local start_line = util.clamp(anchor_start, 1, line_count) - 1
       local end_line = util.clamp(anchor_end, 1, line_count)
-      local text = M.virtual_text(task, anchor)
+      local text = M.virtual_text(bufnr, task, anchor)
 
       vim.api.nvim_buf_set_extmark(bufnr, state.namespace, start_line, 0, {
         end_row = end_line,
-        hl_group = M.highlight_group(anchor),
+        hl_group = M.highlight_group(bufnr, anchor),
         hl_eol = true,
         virt_text = { { text, "Comment" } },
         virt_text_pos = config.options.virtual_text_pos,
@@ -132,7 +146,7 @@ function M.anchor_at_cursor()
   for _, task_index in ipairs(task_indexes) do
     local task = state.plan.tasks[task_index]
     for anchor_index, anchor in ipairs(task.anchors or {}) do
-      local start_line, end_line = locator.range(bufnr, anchor)
+      local start_line, end_line = locator.active_range(bufnr, anchor)
       if row >= start_line and row <= end_line then
         return task, anchor, { task = task_index, anchor = anchor_index }
       end
