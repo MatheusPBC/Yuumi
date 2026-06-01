@@ -89,3 +89,47 @@ minit.test("validates the selected anchor when cursor is outside anchor range", 
 
   cleanup()
 end)
+
+minit.test("reports buffer line numbers for validate diagnostics", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Line diagnostics plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Add log",
+        anchors = {
+          {
+            id = "anchor",
+            line = 10,
+            writeText = {
+              "logger.info(",
+              "  \"parsed\",",
+              "  extra={}",
+            },
+          },
+        },
+      },
+    },
+  }
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+  vim.cmd.edit(vim.uv.cwd() .. "/examples/sample.lua")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+    "first",
+    "logger.info(",
+    "  extra={}",
+  })
+
+  local result = validate.current_buffer()
+  local text = table.concat(validate.lines(result), "\n")
+
+  minit.eq(2, result.details[1].line)
+  minit.eq(11, result.details[2].line)
+  minit.truthy(text:match("Missing L2 %(line 11%)"))
+
+  cleanup()
+end)

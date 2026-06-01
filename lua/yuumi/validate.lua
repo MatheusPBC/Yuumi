@@ -3,6 +3,7 @@ local state = require("yuumi.state")
 local ui = require("yuumi.ui")
 local util = require("yuumi.util")
 local anchor_util = require("yuumi.anchor")
+local locator = require("yuumi.locator")
 
 local M = {}
 
@@ -11,9 +12,9 @@ local function trim(value)
 end
 
 local function find_exact(buffer_lines, expected)
-  for _, line in ipairs(buffer_lines) do
+  for line_number, line in ipairs(buffer_lines) do
     if line == expected then
-      return true
+      return line_number
     end
   end
 
@@ -27,7 +28,7 @@ local function find_different(buffer_lines, expected)
     return nil
   end
 
-  for _, line in ipairs(buffer_lines) do
+  for line_number, line in ipairs(buffer_lines) do
     if trim(line) ~= "" and trim(line) ~= expected_trimmed then
       local shared = 0
       for index = 1, math.min(#trim(line), #expected_trimmed) do
@@ -38,9 +39,22 @@ local function find_different(buffer_lines, expected)
       end
 
       if shared >= 6 then
-        return line
+        return line, line_number
       end
     end
+  end
+
+  return nil
+end
+
+local function expected_line(anchor, index)
+  local ok, start_line = pcall(locator.range, 0, anchor)
+  if ok and start_line then
+    return start_line + index - 1
+  end
+
+  if anchor.line then
+    return anchor.line + index - 1
   end
 
   return nil
@@ -73,17 +87,18 @@ function M.current_buffer()
   }
 
   for index, expected in ipairs(expected_lines) do
-    if find_exact(buffer_lines, expected) then
+    local line_number = find_exact(buffer_lines, expected)
+    if line_number then
       result.ok = result.ok + 1
-      table.insert(result.details, { status = "ok", index = index, expected = expected })
+      table.insert(result.details, { status = "ok", index = index, expected = expected, line = line_number })
     else
-      local actual = find_different(buffer_lines, expected)
+      local actual, actual_line = find_different(buffer_lines, expected)
       if actual then
         result.different = result.different + 1
-        table.insert(result.details, { status = "different", index = index, expected = expected, actual = actual })
+        table.insert(result.details, { status = "different", index = index, expected = expected, actual = actual, line = actual_line })
       else
         result.missing = result.missing + 1
-        table.insert(result.details, { status = "missing", index = index, expected = expected })
+        table.insert(result.details, { status = "missing", index = index, expected = expected, line = expected_line(anchor, index) })
       end
     end
   end
@@ -106,11 +121,11 @@ function M.lines(result)
   for _, detail in ipairs(result.details) do
     if detail.status == "missing" then
       table.insert(lines, "")
-      table.insert(lines, string.format("Missing L%d:", detail.index))
+      table.insert(lines, string.format("Missing L%d%s:", detail.index, detail.line and string.format(" (line %d)", detail.line) or ""))
       table.insert(lines, "  expected: " .. detail.expected)
     elseif detail.status == "different" then
       table.insert(lines, "")
-      table.insert(lines, string.format("Different L%d:", detail.index))
+      table.insert(lines, string.format("Different L%d%s:", detail.index, detail.line and string.format(" (line %d)", detail.line) or ""))
       table.insert(lines, "  expected: " .. detail.expected)
       table.insert(lines, "  actual:   " .. detail.actual)
     end

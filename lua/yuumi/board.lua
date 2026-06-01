@@ -23,6 +23,31 @@ local function section(lines, title)
   table.insert(lines, "= " .. title .. " =")
 end
 
+local function panel(lines, title)
+  table.insert(lines, "")
+  table.insert(lines, title)
+end
+
+local function pad(value, width)
+  value = value or ""
+  if #value >= width then
+    return value
+  end
+
+  return value .. string.rep(" ", width - #value)
+end
+
+local function combine_columns(left, right, left_width)
+  local lines = {}
+  local total = math.max(#left, #right)
+
+  for index = 1, total do
+    table.insert(lines, pad(left[index], left_width) .. " │ " .. (right[index] or ""))
+  end
+
+  return lines
+end
+
 local function short_path(path)
   if #path <= 36 then
     return path
@@ -152,6 +177,7 @@ local function progress_counts()
 end
 
 local function add_files(lines)
+  panel(lines, "[3]-Arquivos")
   section(lines, "Arquivos")
   for task_index, task in ipairs(state.plan.tasks or {}) do
     local pending = 0
@@ -168,6 +194,54 @@ local function add_files(lines)
       local marker = task_index == state.cursor.task and anchor_index == state.cursor.anchor and ">" or " "
       local start_line = locator.range(0, anchor)
       table.insert(lines, string.format("   %s %s L%d %s", marker, status_label(anchor), start_line, anchor.id or task.summary or "patch"))
+    end
+  end
+end
+
+local function add_status(lines)
+  local counts = progress_counts()
+  panel(lines, "[1]-Status")
+  table.insert(lines, string.format("%d patches · %d done · %d pending · %d stale · %d skipped", counts.total, counts.done, counts.pending, counts.stale, counts.skipped))
+  table.insert(lines, state.plan.title or "untitled")
+end
+
+local function add_patches(lines)
+  panel(lines, "[2]-Patches")
+  for task_index, task in ipairs(state.plan.tasks or {}) do
+    for anchor_index, anchor in ipairs(task.anchors or {}) do
+      local marker = task_index == state.cursor.task and anchor_index == state.cursor.anchor and "▶" or " "
+      local label = anchor.id or task.summary or "patch"
+      table.insert(lines, string.format("%s %s %s", marker, status_label(anchor), label))
+    end
+  end
+end
+
+local function add_actions(lines)
+  panel(lines, "[4]-Acoes")
+  table.insert(lines, "Enter abrir · v validate · c check")
+  table.insert(lines, "d done · s skip · z zoom · ? help")
+end
+
+local function add_validate_summary(lines)
+  panel(lines, "[5]-Validate / Diagnostics")
+  local ok, validate = pcall(require, "yuumi.validate")
+  if not ok then
+    table.insert(lines, "Validate unavailable")
+    return
+  end
+
+  local result, err = validate.current_buffer()
+  if not result then
+    table.insert(lines, err or "No diagnostics")
+    return
+  end
+
+  table.insert(lines, string.format("OK %d · Missing %d · Different %d", result.ok, result.missing, result.different))
+  for _, detail in ipairs(result.details) do
+    if detail.status == "missing" then
+      table.insert(lines, string.format("✗ expected L%d%s", detail.index, detail.line and string.format(" @ %d", detail.line) or ""))
+    elseif detail.status == "different" then
+      table.insert(lines, string.format("~ different L%d%s", detail.index, detail.line and string.format(" @ %d", detail.line) or ""))
     end
   end
 end
@@ -225,6 +299,10 @@ local function add_highlight(buf, row, from_text, group)
 end
 
 local function highlight_line(buf, row, line)
+  if line:match("%[%d%]%-") then
+    vim.api.nvim_buf_add_highlight(buf, M.namespace, "YuumiBoardSection", row, 0, -1)
+  end
+
   if line:match("^= .+ =$") then
     vim.api.nvim_buf_add_highlight(buf, M.namespace, "YuumiBoardSection", row, 0, -1)
   end
@@ -244,12 +322,12 @@ end
 
 local function window_size()
   if M.zoomed then
-    local width = math.min(vim.o.columns - 4, math.max(64, math.floor(vim.o.columns * 0.8)))
+    local width = math.min(vim.o.columns - 4, math.max(96, math.floor(vim.o.columns * 0.92)))
     local height = math.min(vim.o.lines - 6, math.max(16, math.floor(vim.o.lines * 0.85)))
     return width, height
   end
 
-  local width = math.min(64, math.max(52, math.floor(vim.o.columns * 0.34)))
+  local width = math.min(vim.o.columns - 4, math.max(84, math.floor(vim.o.columns * 0.82)))
   local height = math.min(#M.lines(), math.max(12, vim.o.lines - 6))
   return width, height
 end
@@ -258,7 +336,7 @@ local function window_config(width, height)
   return {
     relative = "editor",
     row = 2,
-    col = vim.o.columns - width - 2,
+    col = math.max(1, math.floor((vim.o.columns - width) / 2)),
     width = width,
     height = height,
     border = "rounded",
@@ -276,6 +354,7 @@ local function apply_highlights(buf)
 end
 
 local function add_current_details(lines)
+  panel(lines, "[0]-Patch / Preview esperado")
   local file_task, file_anchor = current_file_anchor()
   if file_task and file_anchor then
     add_anchor_details(lines, "Patch atual", file_task, file_anchor)
@@ -296,12 +375,20 @@ function M.lines()
     state.plan.title or "untitled",
   }
 
-  local counts = progress_counts()
-  table.insert(lines, string.format("%d patches · %d done · %d pending · %d stale · %d skipped", counts.total, counts.done, counts.pending, counts.stale, counts.skipped))
+  local left = {}
+  local right = {}
 
-  add_files(lines)
-  add_current_details(lines)
-  add_plan_queue(lines)
+  add_status(left)
+  add_patches(left)
+  add_files(left)
+  add_actions(left)
+
+  add_current_details(right)
+  add_validate_summary(right)
+  add_plan_queue(right)
+
+  local board_width = math.min(vim.o.columns - 4, math.max(84, math.floor(vim.o.columns * 0.82)))
+  vim.list_extend(lines, combine_columns(left, right, math.max(38, math.floor(board_width * 0.38))))
   return lines
 end
 

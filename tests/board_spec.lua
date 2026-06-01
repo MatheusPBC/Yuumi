@@ -293,7 +293,7 @@ minit.test("opens a wider board window", function()
   board.open()
   local config = vim.api.nvim_win_get_config(board.win)
 
-  minit.eq(52, config.width)
+  minit.eq(98, config.width)
 
   board.close()
   vim.o.columns = original_columns
@@ -330,10 +330,10 @@ minit.test("toggles board zoom size", function()
   board.toggle_zoom()
   local restored_config = vim.api.nvim_win_get_config(board.win)
 
-  minit.eq(52, normal_config.width)
-  minit.eq(96, zoom_config.width)
+  minit.eq(98, normal_config.width)
+  minit.eq(110, zoom_config.width)
   minit.eq(34, zoom_config.height)
-  minit.eq(52, restored_config.width)
+  minit.eq(98, restored_config.width)
 
   board.close()
   vim.o.columns = original_columns
@@ -440,6 +440,50 @@ minit.test("truncates lambda paths with enough parent context", function()
 
   minit.truthy(text:match("%.%.%./smartly_send_device_command_appsync/function/lambda_function%.py"))
   minit.truthy(text:match("%.%.%./smartly_ingest_devices_appsync/function/lambda_function%.py"))
+
+  cleanup()
+end)
+
+minit.test("renders lazygit-style workbench panels", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Workbench plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Add log",
+        anchors = {
+          {
+            id = "patch",
+            line = 4,
+            guidance = "Insert log",
+            writeText = {
+              "logger.info(",
+              "  \"dispatch\",",
+              ")",
+            },
+            doneWhen = { "Log exists" },
+          },
+        },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+
+  local text = table.concat(board.lines(), "\n")
+
+  minit.truthy(text:match("%[1%]%-Status"))
+  minit.truthy(text:match("%[2%]%-Patches"))
+  minit.truthy(text:match("%[3%]%-Arquivos"))
+  minit.truthy(text:match("%[4%]%-Acoes"))
+  minit.truthy(text:match("%[0%]%-Patch / Preview esperado"))
+  minit.truthy(text:match("%[5%]%-Validate / Diagnostics"))
+  minit.truthy(text:match("logger%.info%("))
 
   cleanup()
 end)
