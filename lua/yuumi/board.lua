@@ -28,8 +28,8 @@ local function short_path(path)
   end
 
   local parts = vim.split(path, "/", { plain = true })
-  if #parts >= 2 then
-    return ".../" .. parts[#parts - 1] .. "/" .. parts[#parts]
+  if #parts >= 3 then
+    return ".../" .. table.concat(vim.list_slice(parts, #parts - 2), "/")
   end
 
   return "..." .. path:sub(#path - 32)

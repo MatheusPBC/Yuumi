@@ -229,7 +229,7 @@ minit.test("renders organized sections with progress summary", function()
   minit.truthy(text:match("= Fazer ="))
   minit.truthy(text:match("= Codigo esperado ="))
   minit.truthy(text:match("= Checklist ="))
-  minit.truthy(text:match("%.%.%./first/lambda_function%.py"))
+  minit.truthy(text:match("%.%.%./to/first/lambda_function%.py"))
 
   cleanup()
 end)
@@ -332,5 +332,38 @@ minit.test("adds board highlights for sections and statuses", function()
   minit.truthy(groups.YuumiBoardKey)
 
   board.close()
+  cleanup()
+end)
+
+minit.test("truncates lambda paths with enough parent context", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Lambda path plan",
+    tasks = {
+      {
+        id = "send",
+        file = "src/handlers/smartly_send_device_command_appsync/function/lambda_function.py",
+        summary = "Send command",
+        anchors = { { id = "send-log", line = 1, writeText = { "logger.info('send')" } } },
+      },
+      {
+        id = "ingest",
+        file = "src/handlers/smartly_ingest_devices_appsync/function/lambda_function.py",
+        summary = "Ingest devices",
+        anchors = { { id = "ingest-log", line = 1, writeText = { "logger.info('ingest')" } } },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+
+  local text = table.concat(board.lines(), "\n")
+
+  minit.truthy(text:match("%.%.%./smartly_send_device_command_appsync/function/lambda_function%.py"))
+  minit.truthy(text:match("%.%.%./smartly_ingest_devices_appsync/function/lambda_function%.py"))
+
   cleanup()
 end)
