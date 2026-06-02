@@ -50,3 +50,25 @@ minit.test("lists Yuumi plan json files from .agent/plans", function()
   minit.truthy(labels:match("%.agent/plans/nested%-plan%.json"))
   os.remove(dir .. "/nested-plan.json")
 end)
+
+minit.test("falls back to recursive workspace search for nested repo plans", function()
+  local original_cwd = vim.uv.cwd()
+  local workspace = vim.fn.tempname()
+  local plan_dir = workspace .. "/smartly.backend_smartly-dev/.agent"
+  vim.fn.mkdir(plan_dir, "p")
+
+  local file = io.open(plan_dir .. "/appsync-debug-logs-plan.json", "w")
+  file:write('{"version":1,"title":"Nested","tasks":[]}')
+  file:close()
+
+  vim.uv.chdir(workspace)
+
+  local items = plans.list()
+  local labels = table.concat(vim.tbl_map(function(item)
+    return item.path
+  end, items), "\n")
+
+  minit.truthy(labels:match("smartly%.backend_smartly%-dev/%.agent/appsync%-debug%-logs%-plan%.json"))
+
+  vim.uv.chdir(original_cwd)
+end)

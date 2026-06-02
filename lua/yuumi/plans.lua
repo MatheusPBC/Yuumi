@@ -7,6 +7,10 @@ local plan_dirs = {
   ".agent",
 }
 
+local function is_plan_file(name)
+  return name:match("%.json$") and name:match("plan")
+end
+
 local function searched_paths()
   local items = {}
 
@@ -17,12 +21,36 @@ local function searched_paths()
   return items
 end
 
-local function is_plan_file(name)
-  return name:match("%.json$") and name:match("plan")
+local function add_item(items, seen, path)
+  if not path or seen[path] then
+    return
+  end
+
+  seen[path] = true
+  table.insert(items, {
+    label = vim.fn.fnamemodify(path, ":."),
+    path = vim.fn.fnamemodify(path, ":."),
+  })
+end
+
+local function scan_recursive_plans(root, items, seen)
+  local patterns = {
+    "**/.agent/*plan*.json",
+    "**/.agent/plans/*plan*.json",
+  }
+
+  for _, pattern in ipairs(patterns) do
+    for _, path in ipairs(vim.fn.globpath(root, pattern, false, true)) do
+      if is_plan_file(path) then
+        add_item(items, seen, path)
+      end
+    end
+  end
 end
 
 function M.list()
   local items = {}
+  local seen = {}
 
   for _, plan_dir in ipairs(plan_dirs) do
     local resolved_dir = util.resolve_existing_path(plan_dir)
@@ -36,10 +64,18 @@ function M.list()
         end
 
         if kind == "file" and is_plan_file(name) then
-          table.insert(items, { label = name, path = plan_dir .. "/" .. name })
+          local path = plan_dir .. "/" .. name
+          if not seen[path] then
+            seen[path] = true
+            table.insert(items, { label = name, path = path })
+          end
         end
       end
     end
+  end
+
+  if #items == 0 then
+    scan_recursive_plans(util.root(), items, seen)
   end
 
   table.sort(items, function(left, right)
