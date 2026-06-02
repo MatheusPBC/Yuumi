@@ -1,6 +1,29 @@
 local minit = require("tests.minit")
 local plans = require("yuumi.plans")
 
+minit.test("shows cwd and searched paths when no plans are found", function()
+  local original_cwd = vim.uv.cwd()
+  local temp_dir = vim.fn.tempname()
+  vim.fn.mkdir(temp_dir, "p")
+  vim.uv.chdir(temp_dir)
+
+  local message = nil
+  local original_notify = vim.notify
+  vim.notify = function(text)
+    message = text
+  end
+
+  plans.select(function() end)
+
+  vim.notify = original_notify
+  vim.uv.chdir(original_cwd)
+
+  minit.truthy(message:match("No Yuumi plans found in"))
+  minit.truthy(message:match(vim.pesc(temp_dir)))
+  minit.truthy(message:match("cwd:"))
+  minit.truthy(message:match(":YuumiLoad /absolute/path/to/plan%.json"))
+end)
+
 minit.test("lists Yuumi plan json files from .agent", function()
   local items = plans.list()
   local labels = table.concat(vim.tbl_map(function(item)

@@ -7,6 +7,16 @@ local plan_dirs = {
   ".agent",
 }
 
+local function searched_paths()
+  local items = {}
+
+  for _, plan_dir in ipairs(plan_dirs) do
+    table.insert(items, util.resolve_existing_path(plan_dir) or util.join_path(util.root(), plan_dir))
+  end
+
+  return items
+end
+
 local function is_plan_file(name)
   return name:match("%.json$") and name:match("plan")
 end
@@ -43,7 +53,16 @@ function M.select(callback)
   local items = M.list()
 
   if #items == 0 then
-    util.notify("No Yuumi plans found in .agent/plans or .agent", vim.log.levels.WARN)
+    local paths = searched_paths()
+    util.notify(
+      string.format(
+        "No Yuumi plans found in %s or %s (cwd: %s). Use :YuumiLoad /absolute/path/to/plan.json",
+        paths[1],
+        paths[2],
+        util.root()
+      ),
+      vim.log.levels.WARN
+    )
     return
   end
 
