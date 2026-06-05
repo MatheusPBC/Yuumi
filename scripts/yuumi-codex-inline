@@ -3,7 +3,27 @@ set -euo pipefail
 
 payload="$(cat)"
 
-prompt="You are Yuumi's inline completion adapter.
+if [[ "$payload" == *'"action":"check"'* || "$payload" == *'"action": "check"'* ]]; then
+  prompt="You are Yuumi's AI patch reviewer.
+
+You receive a JSON payload from a Neovim plugin. The payload includes the
+current plan, active patch, expected writeText, deterministic validation result,
+and current buffer content.
+
+Review whether the active patch is correctly implemented in the buffer.
+
+Return only compact JSON, with no Markdown, no code fence, and no explanation
+outside JSON. Use exactly one of these statuses:
+- approved: the expected patch is present and matches the intent.
+- needs-change: the patch is missing, incomplete, wrong, unsafe, or ambiguous.
+
+JSON shape:
+{\"status\":\"approved\",\"summary\":\"short reason\"}
+
+Payload:
+${payload}"
+else
+  prompt="You are Yuumi's inline completion adapter.
 
 You receive a JSON payload from a Neovim plugin. The payload includes the
 current file, cursor line, typed prefix, nearby lines, plan guidance, and the
@@ -18,6 +38,7 @@ If no useful suffix is safe, return an empty response.
 
 Payload:
 ${payload}"
+fi
 
 cmd=(codex exec --sandbox read-only --ephemeral)
 

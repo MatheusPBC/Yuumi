@@ -83,6 +83,39 @@ minit.test("AI check stores provider output in state", function()
   cleanup()
 end)
 
+minit.test("AI check accepts approved JSON review", function()
+  cleanup()
+  setup_plan()
+  config.setup({
+    state_path = ".agent/yuumi-test-state.json",
+    ai_command = { "sh", "-c", "printf '%s' '{\"status\":\"approved\",\"summary\":\"patch matches\"}'" },
+  })
+
+  local result, err = ai.check_current()
+
+  minit.eq(nil, err)
+  minit.eq("approved", result.status)
+  minit.truthy(result.output:match('"summary":"patch matches"'))
+
+  cleanup()
+end)
+
+minit.test("AI check accepts needs-change JSON review", function()
+  cleanup()
+  setup_plan()
+  config.setup({
+    state_path = ".agent/yuumi-test-state.json",
+    ai_command = { "sh", "-c", "printf '%s' '{\"status\":\"needs-change\",\"summary\":\"missing text\"}'" },
+  })
+
+  local result, err = ai.check_current()
+
+  minit.eq(nil, err)
+  minit.eq("needs-change", result.status)
+
+  cleanup()
+end)
+
 minit.test("AI check runs provider from plan root", function()
   cleanup()
   setup_plan()
