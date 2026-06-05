@@ -218,6 +218,39 @@ minit.test("renders AI review panel from latest check", function()
   cleanup()
 end)
 
+minit.test("renders multiline AI review errors as safe buffer lines", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "AI error board plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Task",
+        anchors = { { id = "patch", line = 1, writeText = { "local value = 1" } } },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.ai_review = {
+    status = "blocked",
+    patch = "patch",
+    error = "Reading additional input from stdin...\nNot inside a trusted directory",
+  }
+  state.index_tasks()
+
+  local lines = board.lines()
+
+  for _, line in ipairs(lines) do
+    minit.eq(nil, line:match("\n"))
+  end
+
+  cleanup()
+end)
+
 minit.test("renders current patch target line range", function()
   cleanup()
 

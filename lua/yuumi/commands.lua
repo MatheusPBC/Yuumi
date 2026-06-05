@@ -22,7 +22,7 @@ function M.main()
     return
   end
 
-  sidebar.show()
+  board.open({ force = true })
   ui.select_task("Yuumi patches", function(task_index, anchor_index)
     nav.open(task_index, anchor_index)
   end)
@@ -32,7 +32,7 @@ function M.load(opts, after_load)
   if not opts.args or opts.args == "" then
     plans.select(function(path)
       M.load({ args = path }, after_load or function()
-        sidebar.show()
+        board.open({ force = true })
       end)
     end)
     return
@@ -43,7 +43,7 @@ function M.load(opts, after_load)
     if after_load then
       after_load()
     elseif config.options.open_files_on_load then
-      sidebar.show()
+      board.open({ force = true })
       nav.files()
     end
   end
@@ -68,6 +68,7 @@ end
 
 local function check_current()
   ai.show_check()
+  board.refresh()
   sidebar.refresh()
 end
 

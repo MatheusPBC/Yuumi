@@ -278,6 +278,16 @@ local function add_validate_summary(lines)
   end
 end
 
+local function add_multiline(lines, value, prefix)
+  if not value or value == "" then
+    return
+  end
+
+  for index, line in ipairs(vim.split(value, "\n", { trimempty = true })) do
+    table.insert(lines, index == 1 and (prefix or "") .. line or line)
+  end
+end
+
 local function add_ai_review(lines)
   panel(lines, "[6]-AI Review")
   local review = state.ai_review
@@ -290,14 +300,8 @@ local function add_ai_review(lines)
   if review.patch then
     table.insert(lines, "Patch: " .. review.patch)
   end
-  if review.error then
-    table.insert(lines, "Error: " .. review.error)
-  end
-  if review.output then
-    for _, line in ipairs(vim.split(review.output, "\n", { trimempty = true })) do
-      table.insert(lines, line)
-    end
-  end
+  add_multiline(lines, review.error, "Error: ")
+  add_multiline(lines, review.output)
 end
 
 local function queue_items()
