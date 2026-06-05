@@ -1,22 +1,16 @@
 local config = require("yuumi.config")
 local marks = require("yuumi.marks")
+local provider = require("yuumi.provider")
 local ui = require("yuumi.ui")
 local util = require("yuumi.util")
 
 local M = {}
 
 function M.run_command(payload)
-  local command = config.options.gpt_command
-  if not command then
-    return nil, "No GPT command configured"
-  end
-
-  local result = vim.system(command, { stdin = vim.json.encode(payload), text = true }):wait()
-  if result.code ~= 0 then
-    return nil, result.stderr
-  end
-
-  return result.stdout
+  return provider.run(config.options.gpt_command, payload, {
+    missing = "No GPT command configured",
+    failed = "GPT command failed",
+  })
 end
 
 local function context_lines(title)

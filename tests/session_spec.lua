@@ -40,3 +40,19 @@ minit.test("loads last plan from persisted session", function()
 
   cleanup()
 end)
+
+minit.test("loads persisted AI review", function()
+  cleanup()
+
+  minit.truthy(plan.load(".agent/current-plan.json"))
+  state.ai_review = { status = "approved", patch = "anchor-1", output = "approved" }
+  persist.save()
+  state.ai_review = nil
+
+  persist.load()
+
+  minit.eq("approved", state.ai_review.status)
+  minit.eq("anchor-1", state.ai_review.patch)
+
+  cleanup()
+end)

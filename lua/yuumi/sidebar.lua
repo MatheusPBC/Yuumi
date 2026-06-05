@@ -1,4 +1,5 @@
 local board = require("yuumi.board")
+local board_view = require("yuumi.board_view")
 local state = require("yuumi.state")
 local ui_cleanup = require("yuumi.ui_cleanup")
 local util = require("yuumi.util")
@@ -30,7 +31,7 @@ function M.refresh()
     return
   end
 
-  local lines = board.lines()
+  local lines = board_view.lines()
   vim.bo[M.buf].modifiable = true
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, lines)
   vim.bo[M.buf].modifiable = false

@@ -24,6 +24,7 @@ local function encode_state()
     plan = state.plan and state.plan.title or nil,
     plan_path = state.plan_path,
     cursor = state.cursor,
+    ai_review = state.ai_review,
     anchors = anchors,
   }
 end
@@ -82,6 +83,9 @@ function M.load()
 
   if type(decoded.cursor) == "table" then
     state.cursor = decoded.cursor
+  end
+  if type(decoded.ai_review) == "table" then
+    state.ai_review = decoded.ai_review
   end
 end
 

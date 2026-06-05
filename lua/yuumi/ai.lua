@@ -1,5 +1,7 @@
 local anchor_util = require("yuumi.anchor")
 local config = require("yuumi.config")
+local persist = require("yuumi.persist")
+local provider = require("yuumi.provider")
 local state = require("yuumi.state")
 local util = require("yuumi.util")
 local validate = require("yuumi.validate")
@@ -67,17 +69,10 @@ function M.build_payload(action)
 end
 
 function M.run(payload)
-  local command = config.options.ai_command
-  if not command then
-    return nil, "No Yuumi AI command configured"
-  end
-
-  local result = vim.system(command, { stdin = vim.json.encode(payload), text = true }):wait()
-  if result.code ~= 0 then
-    return nil, result.stderr ~= "" and result.stderr or "Yuumi AI command failed"
-  end
-
-  return result.stdout
+  return provider.run(config.options.ai_command, payload, {
+    missing = "No Yuumi AI command configured",
+    failed = "Yuumi AI command failed",
+  })
 end
 
 function M.check_current()
@@ -99,6 +94,7 @@ function M.check_current()
     patch = payload.patch.id,
     output = output,
   }
+  persist.save()
   return state.ai_review
 end
 
