@@ -347,9 +347,9 @@ local function add_current_details(lines)
   add_anchor_details(lines, "Patch atual", task, anchor)
 end
 
-function M.lines()
+function M.render()
   if not state.plan then
-    return { "Yuumi Plan", "", "No plan loaded" }
+    return { lines = { "Yuumi Plan", "", "No plan loaded" }, actions = {} }
   end
 
   local lines = {
@@ -358,11 +358,12 @@ function M.lines()
   }
 
   local left = {}
+  local left_actions = {}
   local right = {}
 
   add_status(left)
-  add_patches(left)
-  add_files(left)
+  add_patches(left, left_actions)
+  add_files(left, left_actions)
   add_actions(left)
 
   add_current_details(right)
@@ -372,7 +373,16 @@ function M.lines()
 
   local board_width = math.min(vim.o.columns - 4, math.max(84, math.floor(vim.o.columns * 0.82)))
   vim.list_extend(lines, combine_columns(left, right, math.max(38, math.floor(board_width * 0.38)), board_width))
-  return lines
+  local actions = {}
+  for line, action in pairs(left_actions) do
+    actions[line + 2] = action
+  end
+
+  return { lines = lines, actions = actions }
+end
+
+function M.lines()
+  return M.render().lines
 end
 
 function M.panel_lines(builder)

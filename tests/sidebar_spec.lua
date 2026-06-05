@@ -115,3 +115,34 @@ minit.test("YuumiBoard command closes orphan sidebar splits", function()
 
   cleanup()
 end)
+
+minit.test("sidebar opens selected patch in source window", function()
+  cleanup()
+  setup_plan()
+  table.insert(state.plan.tasks[1].anchors, { id = "second", line = 2, writeText = { "local second = 2" } })
+  vim.cmd.edit(vim.uv.cwd() .. "/examples/sample.lua")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, { "local value = 1", "local second = 2" })
+  vim.bo.modified = false
+  local source_win = vim.api.nvim_get_current_win()
+
+  sidebar.show()
+  local selected_line
+  for line, action in pairs(sidebar.line_actions) do
+    if action.anchor_index == 2 then
+      selected_line = line
+      break
+    end
+  end
+
+  minit.truthy(selected_line)
+  vim.api.nvim_set_current_win(sidebar.win)
+  vim.api.nvim_win_set_cursor(sidebar.win, { selected_line, 0 })
+
+  minit.eq(true, sidebar.open_selected())
+
+  minit.eq(source_win, vim.api.nvim_get_current_win())
+  minit.eq(2, state.cursor.anchor)
+  minit.truthy(sidebar.is_open())
+
+  cleanup()
+end)
