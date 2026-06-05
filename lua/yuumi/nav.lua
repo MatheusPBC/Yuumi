@@ -4,6 +4,7 @@ local persist = require("yuumi.persist")
 local state = require("yuumi.state")
 local status_util = require("yuumi.status")
 local ui = require("yuumi.ui")
+local ui_manager = require("yuumi.ui_manager")
 local util = require("yuumi.util")
 
 local M = {}
@@ -21,10 +22,11 @@ local function open_anchor(task_index, anchor_index, opts)
   state.cursor = { task = task_index, anchor = anchor_index }
   vim.cmd.edit(vim.fn.fnameescape(util.resolve_path(task.file)))
   local start_line = locator.range(0, anchor)
-  vim.api.nvim_win_set_cursor(0, { start_line, 0 })
+  local line_count = math.max(1, vim.api.nvim_buf_line_count(0))
+  vim.api.nvim_win_set_cursor(0, { math.min(start_line, line_count), 0 })
   marks.render_buffer(0)
-  if opts.open_board ~= false then
-    pcall(require("yuumi.board").open, { force = true })
+  if opts.refresh_ui ~= false then
+    ui_manager.refresh()
   end
 end
 
@@ -131,7 +133,7 @@ function M.mark_status(status)
   state.cursor = position
   persist.save()
   marks.render_all_loaded_buffers()
-  pcall(require("yuumi.board").open)
+  ui_manager.refresh()
   util.notify(string.format("Marked %s as %s", anchor.id or task.id or "anchor", status))
 end
 
