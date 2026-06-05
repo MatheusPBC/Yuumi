@@ -2,6 +2,7 @@ local state = require("yuumi.state")
 local anchor_util = require("yuumi.anchor")
 local locator = require("yuumi.locator")
 local status = require("yuumi.status")
+local ui_cleanup = require("yuumi.ui_cleanup")
 local util = require("yuumi.util")
 
 local M = {
@@ -576,13 +577,7 @@ function M.close()
     end
   end
 
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    local config = vim.api.nvim_win_get_config(win)
-    local buf = vim.api.nvim_win_get_buf(win)
-    if config.relative ~= "" and vim.bo[buf].filetype == "yuumi" then
-      pcall(vim.api.nvim_win_close, win, true)
-    end
-  end
+  ui_cleanup.close_floats()
 
   M.win = nil
   M.buf = nil
@@ -606,6 +601,8 @@ function M.open(opts)
     util.notify("No plan loaded", vim.log.levels.WARN)
     return
   end
+
+  ui_cleanup.close_sidebars()
 
   if has_open_panel() and not opts.force then
     M.close()

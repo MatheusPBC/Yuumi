@@ -93,3 +93,25 @@ minit.test("YuumiBoard command closes legacy floating board panels", function()
 
   cleanup()
 end)
+
+minit.test("YuumiBoard command closes orphan sidebar splits", function()
+  cleanup()
+  setup_plan()
+  commands.create()
+
+  local orphan_buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[orphan_buf].filetype = "yuumi"
+  vim.api.nvim_buf_set_name(orphan_buf, "Yuumi Plan")
+  vim.cmd("botright vertical new")
+  local orphan_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(orphan_win, orphan_buf)
+
+  minit.truthy(vim.api.nvim_win_is_valid(orphan_win))
+
+  vim.cmd.YuumiBoard()
+
+  minit.eq(false, vim.api.nvim_win_is_valid(orphan_win))
+  minit.truthy(sidebar.is_open())
+
+  cleanup()
+end)

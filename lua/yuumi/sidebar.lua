@@ -1,5 +1,6 @@
 local board = require("yuumi.board")
 local state = require("yuumi.state")
+local ui_cleanup = require("yuumi.ui_cleanup")
 local util = require("yuumi.util")
 
 local M = {
@@ -12,6 +13,7 @@ local function set_options()
   vim.bo[M.buf].bufhidden = "hide"
   vim.bo[M.buf].filetype = "yuumi"
   vim.bo[M.buf].swapfile = false
+  vim.api.nvim_buf_set_name(M.buf, "Yuumi Plan")
   vim.wo[M.win].wrap = false
   vim.wo[M.win].number = false
   vim.wo[M.win].relativenumber = false
@@ -41,6 +43,7 @@ function M.show()
   end
 
   board.close()
+  ui_cleanup.close_sidebars(M.win, M.buf)
 
   if M.is_open() then
     M.refresh()
@@ -55,7 +58,7 @@ function M.show()
   vim.cmd("botright vertical new")
   M.win = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(M.win, M.buf)
-  vim.api.nvim_win_set_width(M.win, math.min(72, math.max(40, math.floor(vim.o.columns * 0.34))))
+  vim.api.nvim_win_set_width(M.win, math.min(48, math.max(32, math.floor(vim.o.columns * 0.24))))
   set_options()
   M.refresh()
   vim.api.nvim_set_current_win(source_win)
@@ -65,6 +68,7 @@ function M.hide()
   if M.is_open() then
     pcall(vim.api.nvim_win_close, M.win, true)
   end
+  ui_cleanup.close_sidebars(nil, M.buf)
   M.win = nil
 end
 

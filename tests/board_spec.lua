@@ -1,11 +1,14 @@
 local board = require("yuumi.board")
 local minit = require("tests.minit")
 local plan = require("yuumi.plan")
+local sidebar = require("yuumi.sidebar")
 local state = require("yuumi.state")
 
 local function cleanup()
+  sidebar.close()
   board.close()
   state.reset()
+  vim.cmd("only!")
   vim.cmd("enew!")
 end
 
@@ -629,6 +632,38 @@ minit.test("board close removes orphan yuumi floating windows", function()
   minit.truthy(vim.api.nvim_win_is_valid(win))
   board.close()
   minit.eq(false, vim.api.nvim_win_is_valid(win))
+
+  cleanup()
+end)
+
+minit.test("board open closes orphan Yuumi Plan sidebar splits", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Sidebar cleanup plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Task",
+        anchors = { { id = "anchor", line = 1, writeText = { "local value = 1" } } },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+
+  sidebar.show()
+  local win = sidebar.win
+
+  minit.truthy(vim.api.nvim_win_is_valid(win))
+
+  board.open()
+
+  minit.eq(false, vim.api.nvim_win_is_valid(win))
+  minit.truthy(board.wins.status and vim.api.nvim_win_is_valid(board.wins.status))
 
   cleanup()
 end)
