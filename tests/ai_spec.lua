@@ -83,6 +83,22 @@ minit.test("AI check stores provider output in state", function()
   cleanup()
 end)
 
+minit.test("AI check runs provider from plan root", function()
+  cleanup()
+  setup_plan()
+  config.setup({
+    state_path = ".agent/yuumi-test-state.json",
+    ai_command = { "sh", "-c", "pwd; cat >/dev/null" },
+  })
+
+  local result, err = ai.check_current()
+
+  minit.eq(nil, err)
+  minit.eq(vim.uv.cwd() .. "\n", result.output)
+
+  cleanup()
+end)
+
 minit.test("YuumiCheck command runs AI review", function()
   cleanup()
   setup_plan()

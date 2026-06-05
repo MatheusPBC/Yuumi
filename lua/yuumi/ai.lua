@@ -72,6 +72,8 @@ function M.run(payload)
   return provider.run(config.options.ai_command, payload, {
     missing = "No Yuumi AI command configured",
     failed = "Yuumi AI command failed",
+  }, {
+    cwd = state.plan_root,
   })
 end
 
