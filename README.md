@@ -4,18 +4,18 @@ Yuumi is a plan-guided pair programming layer for Neovim.
 
 It does not generate plans and does not auto-apply patches. An external agent,
 such as OpenCode, writes a JSON plan. Yuumi turns that plan into navigation,
-minimal buffer markers, a right-side guidance board, inline ghost text, validation, and
-optional AI fallback through an external CLI.
+minimal buffer markers, a persistent guidance sidebar, inline ghost text,
+deterministic validation, and required AI review through an external CLI.
 
 ## What It Does
 
 - Loads `.agent/current-plan.json` or any JSON plan path.
 - Marks patch locations in the target buffers with compact `patch aqui` text.
-- Shows a right-side board with files, patches, status, explanation, expected
+- Shows a persistent sidebar with files, patches, status, explanation, expected
   code, and done criteria.
 - Suggests ghost text from `writeText` without requiring exact trigger words.
 - Falls back to deterministic `inlineSuggestions` when configured.
-- Optionally calls an external AI command for inline suggestions.
+- Calls an external AI command to review the active patch before completion.
 - Validates the current buffer against the active anchor's `writeText`.
 - Persists anchor status, last plan path, and current cursor.
 
@@ -41,6 +41,7 @@ Local development setup:
   config = function()
     require("yuumi").setup({
       inline_ai_enabled = true,
+      ai_command = { "opencode", "run", "--stdin" },
       gpt_command = {
         "/home/matheus/Documentos/vscode/Yuumi/scripts/yuumi-codex-inline",
       },
@@ -56,7 +57,7 @@ Local development setup:
 ```
 
 `:Yuumi` is the main workflow command. With no plan loaded, it opens the plan
-picker. With a plan loaded, it opens the board and patch picker.
+picker. With a plan loaded, it opens the sidebar and patch picker.
 
 This repository includes two sample plans you can alternate between:
 
@@ -86,11 +87,12 @@ To check your progress:
 1. Generate or write a plan JSON.
 2. Run `:Yuumi` and choose a plan.
 3. Run `:Yuumi` again to pick a patch, or navigate patches with `:YuumiNext`.
-4. Read the right-side board.
+4. Read the Yuumi sidebar.
 5. Type the requested code manually.
 6. Accept ghost text with `<M-y>` when useful.
-7. Run `:YuumiValidate` or `:YuumiCheck`.
-8. Mark completed anchors with `:YuumiDone`.
+7. Run `:YuumiValidate` for deterministic line checks.
+8. Run `:YuumiCheck` to ask AI to review the active patch.
+9. Mark completed anchors with `:YuumiDone` after AI approval.
 
 ## Commands
 
@@ -101,13 +103,13 @@ To check your progress:
 | `:YuumiPlans` | Pick and load a plan JSON from `.agent/plans` or `.agent`. |
 | `:YuumiFiles` | Pick a target file from the currently loaded plan. |
 | `:YuumiNext` / `:YuumiPrev` | Navigate through anchors. |
-| `:YuumiBoard` | Show the right-side guidance board. |
-| `:YuumiBoardZoom` | Toggle the board between normal and large size. |
+| `:YuumiBoard` | Toggle the persistent Yuumi sidebar. |
+| `:YuumiBoardZoom` | Legacy float-board zoom helper. |
 | `:YuumiHover` | Show guidance for the current anchor. |
 | `:YuumiStatus` | Show current plan progress. |
 | `:YuumiValidate` | Validate current buffer against active anchor `writeText`. |
-| `:YuumiCheck` | Same validation path as `:YuumiValidate`. |
-| `:YuumiDone` / `:YuumiSkip` | Persist anchor status. |
+| `:YuumiCheck` | Send the active patch, buffer, expected code, and diagnostics to the configured AI command. |
+| `:YuumiDone` / `:YuumiSkip` | Persist anchor status. `done` requires expected text plus AI approval. |
 | `:YuumiResetState` | Clear persisted runtime state. |
 | `:YuumiReanchor` | Re-locate anchors using plan text context. |
 | `:YuumiAcceptInline` | Accept current inline hint from normal command mode. |
@@ -155,6 +157,7 @@ require("yuumi").setup({
   inline_debounce_ms = 80,
   inline_ai_enabled = false,
   accept_keymap = "<M-y>",
+  ai_command = nil,
   gpt_command = nil,
 })
 ```
@@ -162,12 +165,13 @@ require("yuumi").setup({
 Notes:
 
 - `virtual_text_pos = "right_align"` keeps guidance away from code text.
-- `show_virtual_lines = false` keeps the main buffer clean; the board carries
+- `show_virtual_lines = false` keeps the main buffer clean; the sidebar carries
   the full plan details.
-- `open_files_on_load = true` opens the board and task picker after explicit path loads. Plain `:YuumiLoad` opens the plan picker first.
-- `inline_ai_enabled = false` keeps AI calls off unless explicitly enabled.
+- `open_files_on_load = true` opens the sidebar and task picker after explicit path loads. Plain `:YuumiLoad` opens the plan picker first.
+- `ai_command` is required for the AI-first review flow used by `:YuumiCheck`.
+- `inline_ai_enabled = false` only controls inline completion fallback.
 - `gpt_command` is any executable command that receives JSON on stdin and
-  returns text on stdout.
+  returns text on stdout for legacy popup/inline fallback commands.
 
 ## Plan Contract
 
@@ -292,15 +296,16 @@ Legacy v1 fields:
 | `locator.afterText` / `locator.beforeText` | Context boundaries for guided patches. |
 | `reason` | Why this anchor exists. |
 | `guidance` | Human-readable instruction. |
-| `writeText` / `patch.writeText` | Planned lines shown in the board and used by inline/validation. |
+| `writeText` / `patch.writeText` | Planned lines shown in the sidebar and used by inline/validation. |
 | `patch.mode` | Guided patch operation, currently `insert-between`. |
-| `doneWhen` | Checklist shown in the board and hover popup. |
+| `doneWhen` | Checklist shown in the sidebar and hover popup. |
 | `inlineSuggestions` | Optional trigger-based deterministic hints. |
 | `anchorText` / `beforeText` / `afterText` | Deterministic reanchor hints when line numbers drift. |
 
-## Guidance Board
+## Guidance Sidebar
 
-`:YuumiBoard` opens a floating panel on the right side of the editor. It shows:
+`:YuumiBoard` toggles a persistent right split. It keeps the source window
+visible and shows:
 
 - plan title and progress summary
 - `Arquivos`: target files, compact paths, patch counts, and anchor status
@@ -310,14 +315,13 @@ Legacy v1 fields:
 - `Codigo esperado`: exact lines from `writeText`
 - `Checklist`: done criteria
 - `Plano`: execution queue with the current patch and next pending patches
+- `AI Review`: latest AI check result for the active patch
 
-The main buffer only shows a compact `patch aqui` marker. The board is meant to
+The main buffer only shows a compact `patch aqui` marker. The sidebar is meant to
 be the execution guide, while the developer still types or accepts code
 manually.
 
-Board status labels are highlighted by state: pending, done, stale, and skipped.
-Use `:YuumiBoardZoom` when you need more horizontal room for long paths,
-instructions, or planned code.
+Status labels are highlighted by state: pending, done, stale, and skipped.
 
 ## Inline Guidance
 
@@ -350,20 +354,38 @@ On an empty line, Yuumi suggests the next missing `writeText` line.
 
 ## Validation
 
-`:YuumiValidate` and `:YuumiCheck` compare the current buffer with the active
-anchor's `writeText` and report:
+`:YuumiValidate` compares the current buffer with the active anchor's
+`writeText` and report:
 
 - `OK`: exact planned lines already present
 - `Missing`: planned lines not found
 - `Different`: nearby-looking lines that do not exactly match
 
 This is deterministic validation. It checks exact planned lines, not semantic
-equivalence.
+equivalence. `:YuumiCheck` builds on this by sending the patch context,
+validation result, full buffer, expected code, reason, and guidance to
+`ai_command`. `:YuumiDone` requires the deterministic text to exist and the
+latest AI review for the patch to be `approved`.
+
+## AI Review
+
+Yuumi never stores provider keys and does not call OpenAI/OpenRouter directly.
+AI review is delegated to `ai_command`.
+
+`ai_command` receives JSON on stdin and should return either prose containing
+`approved` / `needs-change`, or JSON like:
+
+```json
+{ "status": "approved", "summary": "Patch matches the plan." }
+```
+
+The AI review appears in the board's `AI Review` panel. Without an approved
+review, `:YuumiDone` refuses to mark the patch as done.
 
 ## AI Fallback
 
 Yuumi never stores provider keys and does not call OpenAI/OpenRouter directly.
-AI is delegated to `gpt_command`.
+Inline AI fallback and legacy popup commands are delegated to `gpt_command`.
 
 If your wrapper uses API credentials, keep them outside the plugin in
 environment variables such as `OPENAI_API_KEY`. Do not commit secrets.

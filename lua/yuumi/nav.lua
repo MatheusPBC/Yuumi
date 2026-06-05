@@ -8,7 +8,8 @@ local util = require("yuumi.util")
 
 local M = {}
 
-local function open_anchor(task_index, anchor_index)
+local function open_anchor(task_index, anchor_index, opts)
+  opts = opts or {}
   local task = state.plan.tasks[task_index]
   local anchor = task and task.anchors and task.anchors[anchor_index]
 
@@ -22,10 +23,25 @@ local function open_anchor(task_index, anchor_index)
   local start_line = locator.range(0, anchor)
   vim.api.nvim_win_set_cursor(0, { start_line, 0 })
   marks.render_buffer(0)
-  pcall(require("yuumi.board").open)
+  if opts.open_board ~= false then
+    pcall(require("yuumi.board").open, { force = true })
+  end
 end
 
 M.open = open_anchor
+
+local function has_approved_ai_review(anchor)
+  local review = state.ai_review
+  if not review or review.status ~= "approved" then
+    return false
+  end
+
+  if review.patch and anchor.id and review.patch ~= anchor.id then
+    return false
+  end
+
+  return true
+end
 
 function M.open_current()
   if not state.plan then
@@ -100,9 +116,15 @@ function M.mark_status(status)
     return
   end
 
-  if status == "done" and not status_util.has_expected_text(0, anchor) then
-    util.notify("Cannot mark done: expected Yuumi text is missing", vim.log.levels.WARN)
-    return
+  if status == "done" then
+    if not status_util.has_expected_text(0, anchor) then
+      util.notify("Cannot mark done: expected Yuumi text is missing", vim.log.levels.WARN)
+      return
+    end
+    if not has_approved_ai_review(anchor) then
+      util.notify("Cannot mark done: run :YuumiCheck and get AI approval first", vim.log.levels.WARN)
+      return
+    end
   end
 
   anchor.status = status

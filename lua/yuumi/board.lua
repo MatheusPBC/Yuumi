@@ -7,6 +7,9 @@ local util = require("yuumi.util")
 local M = {
   win = nil,
   buf = nil,
+  wins = {},
+  bufs = {},
+  line_actions = {},
   namespace = vim.api.nvim_create_namespace("yuumi-board"),
   zoomed = false,
 }
@@ -28,24 +31,59 @@ local function panel(lines, title)
   table.insert(lines, title)
 end
 
-local function pad(value, width)
+local function truncate(value, width)
   value = value or ""
-  if #value >= width then
+  if vim.fn.strdisplaywidth(value) <= width then
     return value
   end
 
-  return value .. string.rep(" ", width - #value)
+  if width <= 3 then
+    return value:sub(1, width)
+  end
+
+  local truncated = vim.fn.strcharpart(value, 0, width - 3) .. "..."
+  while vim.fn.strdisplaywidth(truncated) > width do
+    truncated = vim.fn.strcharpart(truncated, 0, vim.fn.strchars(truncated) - 4) .. "..."
+  end
+
+  return truncated
 end
 
-local function combine_columns(left, right, left_width)
+local function pad(value, width)
+  value = truncate(value, width)
+  local display_width = vim.fn.strdisplaywidth(value)
+  if display_width >= width then
+    return value
+  end
+
+  return value .. string.rep(" ", width - display_width)
+end
+
+local function combine_columns(left, right, left_width, total_width)
   local lines = {}
   local total = math.max(#left, #right)
+  local right_width = math.max(10, total_width - left_width - 3)
 
   for index = 1, total do
-    table.insert(lines, pad(left[index], left_width) .. " │ " .. (right[index] or ""))
+    table.insert(lines, pad(left[index], left_width) .. " │ " .. truncate(right[index] or "", right_width))
   end
 
   return lines
+end
+
+local function strip_panel(lines, actions)
+  if lines[1] == "" and lines[2] and lines[2]:match("^%[%d%]%-") then
+    local stripped_actions = {}
+    for line, action in pairs(actions or {}) do
+      if line > 2 then
+        stripped_actions[line - 2] = action
+      end
+    end
+
+    return vim.list_slice(lines, 3), stripped_actions
+  end
+
+  return lines, actions or {}
 end
 
 local function short_path(path)
@@ -176,7 +214,7 @@ local function progress_counts()
   return counts
 end
 
-local function add_files(lines)
+local function add_files(lines, actions)
   panel(lines, "[3]-Arquivos")
   section(lines, "Arquivos")
   for task_index, task in ipairs(state.plan.tasks or {}) do
@@ -190,10 +228,16 @@ local function add_files(lines)
     end
 
     table.insert(lines, string.format("  %d. %s  %d/%d", task_index, short_path(task.file), pending, total))
+    if actions then
+      actions[#lines] = { task_index = task_index, anchor_index = 1 }
+    end
     for anchor_index, anchor in ipairs(task.anchors or {}) do
       local marker = task_index == state.cursor.task and anchor_index == state.cursor.anchor and ">" or " "
       local start_line = locator.range(0, anchor)
       table.insert(lines, string.format("   %s %s L%d %s", marker, status_label(anchor), start_line, anchor.id or task.summary or "patch"))
+      if actions then
+        actions[#lines] = { task_index = task_index, anchor_index = anchor_index }
+      end
     end
   end
 end
@@ -205,13 +249,16 @@ local function add_status(lines)
   table.insert(lines, state.plan.title or "untitled")
 end
 
-local function add_patches(lines)
+local function add_patches(lines, actions)
   panel(lines, "[2]-Patches")
   for task_index, task in ipairs(state.plan.tasks or {}) do
     for anchor_index, anchor in ipairs(task.anchors or {}) do
       local marker = task_index == state.cursor.task and anchor_index == state.cursor.anchor and "▶" or " "
       local label = anchor.id or task.summary or "patch"
       table.insert(lines, string.format("%s %s %s", marker, status_label(anchor), label))
+      if actions then
+        actions[#lines] = { task_index = task_index, anchor_index = anchor_index }
+      end
     end
   end
 end
@@ -242,6 +289,28 @@ local function add_validate_summary(lines)
       table.insert(lines, string.format("✗ expected L%d%s", detail.index, detail.line and string.format(" @ %d", detail.line) or ""))
     elseif detail.status == "different" then
       table.insert(lines, string.format("~ different L%d%s", detail.index, detail.line and string.format(" @ %d", detail.line) or ""))
+    end
+  end
+end
+
+local function add_ai_review(lines)
+  panel(lines, "[6]-AI Review")
+  local review = state.ai_review
+  if not review then
+    table.insert(lines, "Run :YuumiCheck to ask AI to review this patch.")
+    return
+  end
+
+  table.insert(lines, "Status: " .. (review.status or "unknown"))
+  if review.patch then
+    table.insert(lines, "Patch: " .. review.patch)
+  end
+  if review.error then
+    table.insert(lines, "Error: " .. review.error)
+  end
+  if review.output then
+    for _, line in ipairs(vim.split(review.output, "\n", { trimempty = true })) do
+      table.insert(lines, line)
     end
   end
 end
@@ -332,19 +401,6 @@ local function window_size()
   return width, height
 end
 
-local function window_config(width, height)
-  return {
-    relative = "editor",
-    row = 2,
-    col = math.max(1, math.floor((vim.o.columns - width) / 2)),
-    width = width,
-    height = height,
-    border = "rounded",
-    title = M.zoomed and " Yuumi Zoom " or " Yuumi ",
-    style = "minimal",
-  }
-end
-
 local function apply_highlights(buf)
   vim.api.nvim_buf_clear_namespace(buf, M.namespace, 0, -1)
 
@@ -384,20 +440,155 @@ function M.lines()
   add_actions(left)
 
   add_current_details(right)
+  add_ai_review(right)
   add_validate_summary(right)
   add_plan_queue(right)
 
   local board_width = math.min(vim.o.columns - 4, math.max(84, math.floor(vim.o.columns * 0.82)))
-  vim.list_extend(lines, combine_columns(left, right, math.max(38, math.floor(board_width * 0.38))))
+  vim.list_extend(lines, combine_columns(left, right, math.max(38, math.floor(board_width * 0.38)), board_width))
   return lines
+end
+
+local function panel_lines(builder)
+  local lines = {}
+  local actions = {}
+  builder(lines, actions)
+  return strip_panel(lines, actions)
+end
+
+local function current_panel_lines()
+  local lines = {}
+  add_current_details(lines)
+  return strip_panel(lines)
+end
+
+local function validate_panel_lines()
+  local lines = {}
+  add_validate_summary(lines)
+  return strip_panel(lines)
+end
+
+local function ai_review_panel_lines()
+  local lines = {}
+  add_ai_review(lines)
+  return strip_panel(lines)
+end
+
+function M.open_selected(panel_name)
+  local win = M.wins[panel_name]
+  if not win or not vim.api.nvim_win_is_valid(win) then
+    return false
+  end
+
+  local line = vim.api.nvim_win_get_cursor(win)[1]
+  local action = M.line_actions[panel_name] and M.line_actions[panel_name][line]
+  if not action then
+    return false
+  end
+
+  M.close()
+  require("yuumi.nav").open(action.task_index, action.anchor_index, { open_board = false })
+  M.close()
+  return true
+end
+
+local function open_panel(name, title, lines, config, actions)
+  local buf = M.bufs[name]
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then
+    buf = vim.api.nvim_create_buf(false, true)
+    M.bufs[name] = buf
+    vim.bo[buf].bufhidden = "wipe"
+    vim.bo[buf].filetype = "yuumi"
+  end
+
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  apply_highlights(buf)
+  M.line_actions[name] = actions or {}
+
+  local win = M.wins[name]
+  config.border = "single"
+  config.title = " " .. title .. " "
+  config.style = "minimal"
+
+  if win and vim.api.nvim_win_is_valid(win) then
+    vim.api.nvim_win_set_config(win, config)
+  else
+    win = vim.api.nvim_open_win(buf, false, config)
+    M.wins[name] = win
+  end
+
+  vim.wo[win].wrap = false
+  vim.wo[win].cursorline = name == "patches" or name == "files"
+  if next(M.line_actions[name]) then
+    vim.keymap.set("n", "<CR>", function()
+      M.open_selected(name)
+    end, { buffer = buf, nowait = true, silent = true })
+    vim.keymap.set("n", "<2-LeftMouse>", function()
+      M.open_selected(name)
+    end, { buffer = buf, nowait = true, silent = true })
+  end
+  return win
+end
+
+local function has_open_panel()
+  for _, win in pairs(M.wins) do
+    if vim.api.nvim_win_is_valid(win) then
+      return true
+    end
+  end
+
+  return false
+end
+
+local function panel_layout(width, height)
+  local row = 2
+  local col = math.max(1, math.floor((vim.o.columns - width) / 2))
+  local gap = 1
+  local left_width = math.max(32, math.floor(width * 0.38))
+  local right_width = width - left_width - gap
+  local status_height = 4
+  local actions_height = 4
+  local patches_height = math.max(7, math.floor(height * 0.25))
+  local files_height = math.max(8, height - status_height - patches_height - actions_height - (gap * 3))
+  local diagnostics_height = math.max(7, math.floor(height * 0.26))
+  local ai_height = math.max(6, math.floor(height * 0.20))
+  local preview_height = math.max(8, height - diagnostics_height - ai_height - (gap * 2))
+
+  return {
+    status = { relative = "editor", row = row, col = col, width = left_width, height = status_height },
+    patches = { relative = "editor", row = row + status_height + gap, col = col, width = left_width, height = patches_height },
+    files = { relative = "editor", row = row + status_height + patches_height + (gap * 2), col = col, width = left_width, height = files_height },
+    actions = { relative = "editor", row = row + status_height + patches_height + files_height + (gap * 3), col = col, width = left_width, height = actions_height },
+    preview = { relative = "editor", row = row, col = col + left_width + gap, width = right_width, height = preview_height },
+    ai_review = { relative = "editor", row = row + preview_height + gap, col = col + left_width + gap, width = right_width, height = ai_height },
+    diagnostics = { relative = "editor", row = row + preview_height + ai_height + (gap * 2), col = col + left_width + gap, width = right_width, height = diagnostics_height },
+  }
 end
 
 function M.close()
   if M.win and vim.api.nvim_win_is_valid(M.win) then
     vim.api.nvim_win_close(M.win, true)
   end
+
+  for _, win in pairs(M.wins) do
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local config = vim.api.nvim_win_get_config(win)
+    local buf = vim.api.nvim_win_get_buf(win)
+    if config.relative ~= "" and vim.bo[buf].filetype == "yuumi" then
+      pcall(vim.api.nvim_win_close, win, true)
+    end
+  end
+
   M.win = nil
   M.buf = nil
+  M.wins = {}
+  M.bufs = {}
+  M.line_actions = {}
 end
 
 function M.setup_highlights()
@@ -409,43 +600,44 @@ function M.setup_highlights()
   vim.api.nvim_set_hl(0, "YuumiBoardMuted", { default = true, fg = "#7f8da3" })
 end
 
-function M.open()
+function M.open(opts)
+  opts = opts or {}
   if not state.plan then
     util.notify("No plan loaded", vim.log.levels.WARN)
     return
   end
 
-  if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
-    M.buf = vim.api.nvim_create_buf(false, true)
-    vim.bo[M.buf].bufhidden = "wipe"
-    vim.bo[M.buf].filetype = "yuumi"
-  end
-
-  vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, M.lines())
-  apply_highlights(M.buf)
-
-  local width, height = window_size()
-
-  if M.win and vim.api.nvim_win_is_valid(M.win) then
-    vim.api.nvim_win_set_config(M.win, window_config(width, height))
+  if has_open_panel() and not opts.force then
+    M.close()
     return
   end
 
-  M.win = vim.api.nvim_open_win(M.buf, false, window_config(width, height))
+  local width, height = window_size()
+  local layout = panel_layout(width, height)
+
+  local status_lines, status_actions = panel_lines(add_status)
+  local patches_lines, patches_actions = panel_lines(add_patches)
+  local files_lines, files_actions = panel_lines(add_files)
+  local actions_lines, actions_actions = panel_lines(add_actions)
+
+  M.win = open_panel("status", "[1]-Status", status_lines, layout.status, status_actions)
+  open_panel("patches", "[2]-Patches", patches_lines, layout.patches, patches_actions)
+  open_panel("files", "[3]-Arquivos", files_lines, layout.files, files_actions)
+  open_panel("actions", "[4]-Acoes", actions_lines, layout.actions, actions_actions)
+  open_panel("preview", "[0]-Patch / Preview esperado", current_panel_lines(), layout.preview)
+  open_panel("ai_review", "[6]-AI Review", ai_review_panel_lines(), layout.ai_review)
+  open_panel("diagnostics", "[5]-Validate / Diagnostics", validate_panel_lines(), layout.diagnostics)
 end
 
 function M.toggle_zoom()
   M.zoomed = not M.zoomed
-  M.open()
+  M.open({ force = true })
 end
 
 function M.refresh()
-  if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
-    return
+  if state.plan then
+    M.open({ force = true })
   end
-
-  vim.api.nvim_buf_set_lines(M.buf, 0, -1, false, M.lines())
-  apply_highlights(M.buf)
 end
 
 return M

@@ -16,6 +16,7 @@ minit.test("resets persisted status and clears anchor statuses", function()
 
   minit.truthy(plan.load(".agent/current-plan.json"))
   nav.next()
+  state.ai_review = { status = "approved", patch = "anchor-1" }
   nav.mark_status("done")
   minit.truthy(vim.uv.fs_stat(util.resolve_path(config.options.state_path)))
 

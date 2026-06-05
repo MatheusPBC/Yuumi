@@ -11,6 +11,7 @@ M.defaults = {
   inline_debounce_ms = 80,
   inline_ai_enabled = false,
   accept_keymap = "<M-y>",
+  ai_command = nil,
   gpt_command = nil,
 }
 

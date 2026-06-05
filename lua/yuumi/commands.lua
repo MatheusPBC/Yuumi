@@ -1,3 +1,4 @@
+local ai = require("yuumi.ai")
 local board = require("yuumi.board")
 local gpt = require("yuumi.gpt")
 local inline = require("yuumi.inline")
@@ -7,6 +8,7 @@ local persist = require("yuumi.persist")
 local plan = require("yuumi.plan")
 local plans = require("yuumi.plans")
 local reanchor = require("yuumi.reanchor")
+local sidebar = require("yuumi.sidebar")
 local ui = require("yuumi.ui")
 local validate = require("yuumi.validate")
 
@@ -18,7 +20,7 @@ function M.main()
     return
   end
 
-  board.open()
+  sidebar.show()
   ui.select_task("Yuumi patches", function(task_index, anchor_index)
     nav.open(task_index, anchor_index)
   end)
@@ -28,7 +30,7 @@ function M.load(opts, after_load)
   if not opts.args or opts.args == "" then
     plans.select(function(path)
       M.load({ args = path }, after_load or function()
-        board.open()
+        sidebar.show()
       end)
     end)
     return
@@ -39,7 +41,7 @@ function M.load(opts, after_load)
     if after_load then
       after_load()
     elseif require("yuumi.config").options.open_files_on_load then
-      board.open()
+      sidebar.show()
       nav.files()
     end
   end
@@ -101,7 +103,7 @@ function M.create()
   end, { desc = "Validate current edit against Yuumi writeText", force = true })
 
   vim.api.nvim_create_user_command("YuumiBoard", function()
-    board.open()
+    sidebar.toggle()
   end, { desc = "Show Yuumi guidance board", force = true })
 
   vim.api.nvim_create_user_command("YuumiBoardZoom", function()
@@ -129,7 +131,8 @@ function M.create()
   vim.api.nvim_create_user_command("YuumiSuggest", gpt.suggest, { desc = "Suggest an alternative for current Yuumi anchor", force = true })
   vim.api.nvim_create_user_command("YuumiCheck", function()
     if plan.ensure_loaded() then
-      validate.show()
+      ai.show_check()
+      sidebar.refresh()
     end
   end, { desc = "Check current edit against Yuumi anchor", force = true })
   vim.api.nvim_create_user_command("YuumiReanchor", function()

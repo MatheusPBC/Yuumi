@@ -10,6 +10,7 @@ local M = {
   namespace = vim.api.nvim_create_namespace("yuumi"),
   inline_namespace = vim.api.nvim_create_namespace("yuumi_inline"),
   inline = nil,
+  ai_review = nil,
 }
 
 function M.reset()
@@ -19,6 +20,7 @@ function M.reset()
   M.cursor = { task = 1, anchor = 1 }
   M.tasks_by_file = {}
   M.inline = nil
+  M.ai_review = nil
 end
 
 function M.current_task()

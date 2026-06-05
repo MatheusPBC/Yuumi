@@ -3,7 +3,7 @@
 Yuumi                                                     *yuumi*
 
 Yuumi reads a plan generated outside Neovim and turns it into guided
-navigation, compact buffer markers, a right-side guidance board, and
+navigation, compact buffer markers, a persistent guidance sidebar, and
 deterministic inline hints.
 
 The plugin does not generate plans and does not edit files by itself.
@@ -35,7 +35,7 @@ COMMANDS                                                *yuumi-commands*
                                                         *:Yuumi*
 :Yuumi
   Main workflow command. With no plan loaded, opens the plan picker. With a
-  plan loaded, opens the board and patch picker.
+  plan loaded, opens the sidebar and patch picker.
 
                                                         *:YuumiLoad*
 :YuumiLoad [path]
@@ -49,16 +49,15 @@ COMMANDS                                                *yuumi-commands*
 
                                                         *:YuumiBoard*
 :YuumiBoard
-  Show a floating guidance board on the right side of the editor. The board
-  lists plan files, progress, current status, explanation, expected code, and
-  done criteria for the active patch. Its main sections are Arquivos,
-  Patch atual, Por que, Fazer, Codigo esperado, Checklist, and Plano. Status
+  Toggle a persistent right-side guidance sidebar. The sidebar lists plan files,
+  progress, current status, explanation, expected code, AI Review, and done
+  criteria for the active patch. Its main sections are Arquivos, Patch atual,
+  Por que, Fazer, Codigo esperado, Checklist, AI Review, and Plano. Status
   labels are highlighted by state: pending, done, stale, and skipped.
 
                                                         *:YuumiBoardZoom*
 :YuumiBoardZoom
-  Toggle the guidance board between normal and large size. Use it when long
-  paths, instructions, or planned code need more horizontal room.
+  Legacy float-board zoom helper.
 
                                                         *:YuumiFiles*
 :YuumiFiles
@@ -89,7 +88,9 @@ COMMANDS                                                *yuumi-commands*
 
                                                         *:YuumiDone*
 :YuumiDone
-  Mark the current anchor as done in memory.
+  Mark the current anchor as done in memory. Done requires the expected text to
+  exist in the buffer and the latest :YuumiCheck review for this patch to be
+  approved.
 
                                                         *:YuumiSkip*
 :YuumiSkip
@@ -111,11 +112,12 @@ COMMANDS                                                *yuumi-commands*
   Accept the current deterministic inline suggestion.
   By default the same action is mapped to <M-y> in insert mode.
 
-Floating popups such as :YuumiHover, :YuumiStatus, and :YuumiCheck can be closed
+Floating popups such as :YuumiHover and :YuumiStatus can be closed
 by running the same command again. If the popup is focused, press q.
 
-:YuumiCheck uses the same validation path as :YuumiValidate when the current
-anchor has writeText, so it no longer shows only mock context.
+:YuumiCheck sends the current patch, expected code, buffer text, deterministic
+validation result, reason, and guidance to ai_command. The result is shown in
+the board's AI Review panel.
 
 BLINK.CMP SOURCE                                      *yuumi-blink*
 
@@ -133,14 +135,16 @@ The source returns inlineSuggestions from the loaded plan for the current file.
 
 GPT COMMANDS                                        *yuumi-gpt-commands*
 
-These commands use a configured command adapter when gpt_command is set.
+Yuumi has two external command adapters. ai_command is required for AI-first
+patch review through :YuumiCheck. gpt_command is used by legacy popup commands
+and inline fallback when enabled.
 The command receives a JSON payload on stdin and should write text to stdout.
 Yuumi does not store API keys. Keep provider credentials in environment
 variables such as OPENAI_API_KEY or delegate to OpenCode/local wrappers.
 >
+  :YuumiCheck
   :YuumiExplain
   :YuumiSuggest
-  :YuumiCheck
   :YuumiBreakdown
 <
 
@@ -236,15 +240,17 @@ Default setup:
     inline_debounce_ms = 80,
     inline_ai_enabled = false,
     accept_keymap = "<M-y>",
+    ai_command = nil,
     gpt_command = nil,
   })
 <
 
-When open_files_on_load is enabled, explicit path loads can open the board and
+When open_files_on_load is enabled, explicit path loads can open the sidebar and
 file picker after loading. Plain :YuumiLoad opens the plan picker first. The
 default virtual_text_pos is right_align so guidance does not look like typed
-code. The main buffer stays compact with a patch aqui marker; the board carries
-the full plan details.
+code. The main buffer stays compact with a patch aqui marker; the sidebar carries
+the full plan details. Configure ai_command so :YuumiCheck can review patches
+before :YuumiDone accepts completion.
 
 INLINE GUIDANCE                                      *yuumi-inline-guidance*
 

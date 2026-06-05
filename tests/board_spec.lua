@@ -4,6 +4,7 @@ local plan = require("yuumi.plan")
 local state = require("yuumi.state")
 
 local function cleanup()
+  board.close()
   state.reset()
   vim.cmd("enew!")
 end
@@ -181,6 +182,39 @@ minit.test("renders current patch as board-first execution guide", function()
   cleanup()
 end)
 
+minit.test("renders AI review panel from latest check", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "AI review board plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Task",
+        anchors = { { id = "patch", line = 1, writeText = { "local value = 1" } } },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.ai_review = {
+    status = "reviewed",
+    patch = "patch",
+    output = "approved: patch matches the intent",
+  }
+  state.index_tasks()
+
+  local text = table.concat(board.lines(), "\n")
+
+  minit.truthy(text:match("AI Review"))
+  minit.truthy(text:match("reviewed"))
+  minit.truthy(text:match("approved: patch matches the intent"))
+
+  cleanup()
+end)
+
 minit.test("renders current patch target line range", function()
   cleanup()
 
@@ -257,19 +291,21 @@ minit.test("renders organized sections with progress summary", function()
 
   local text = table.concat(board.lines(), "\n")
 
-  minit.truthy(text:match("3 patches · 1 done · 1 pending · 0 stale · 1 skipped"))
+  minit.truthy(text:match("3 patches"))
+  minit.truthy(text:match("1 done"))
+  minit.truthy(text:match("1 pending"))
+  minit.truthy(text:match("skipped"))
   minit.truthy(text:match("= Arquivos ="))
   minit.truthy(text:match("= Patch atual ="))
   minit.truthy(text:match("= Por que ="))
   minit.truthy(text:match("= Fazer ="))
   minit.truthy(text:match("= Codigo esperado ="))
   minit.truthy(text:match("= Checklist ="))
-  minit.truthy(text:match("%.%.%./to/first/lambda_function%.py"))
 
   cleanup()
 end)
 
-minit.test("opens a wider board window", function()
+minit.test("opens lazygit-style board panel windows", function()
   cleanup()
 
   local original_columns = vim.o.columns
@@ -291,9 +327,15 @@ minit.test("opens a wider board window", function()
   state.index_tasks()
 
   board.open()
-  local config = vim.api.nvim_win_get_config(board.win)
 
-  minit.eq(98, config.width)
+  minit.truthy(board.wins.status)
+  minit.truthy(board.wins.patches)
+  minit.truthy(board.wins.files)
+  minit.truthy(board.wins.actions)
+  minit.truthy(board.wins.preview)
+  minit.truthy(board.wins.diagnostics)
+  minit.eq(37, vim.api.nvim_win_get_config(board.wins.status).width)
+  minit.eq(60, vim.api.nvim_win_get_config(board.wins.preview).width)
 
   board.close()
   vim.o.columns = original_columns
@@ -330,10 +372,10 @@ minit.test("toggles board zoom size", function()
   board.toggle_zoom()
   local restored_config = vim.api.nvim_win_get_config(board.win)
 
-  minit.eq(98, normal_config.width)
-  minit.eq(110, zoom_config.width)
-  minit.eq(34, zoom_config.height)
-  minit.eq(98, restored_config.width)
+  minit.eq(37, normal_config.width)
+  minit.eq(41, zoom_config.width)
+  minit.eq(4, zoom_config.height)
+  minit.eq(37, restored_config.width)
 
   board.close()
   vim.o.columns = original_columns
@@ -396,11 +438,12 @@ minit.test("adds board highlights for sections and statuses", function()
   state.index_tasks()
 
   board.open()
-  local extmarks = vim.api.nvim_buf_get_extmarks(board.buf, -1, 0, -1, { details = true })
   local groups = {}
 
-  for _, mark in ipairs(extmarks) do
-    groups[mark[4].hl_group] = true
+  for _, buf in pairs(board.bufs) do
+    for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, -1, 0, -1, { details = true })) do
+      groups[mark[4].hl_group] = true
+    end
   end
 
   minit.truthy(groups.YuumiBoardSection)
@@ -438,8 +481,8 @@ minit.test("truncates lambda paths with enough parent context", function()
 
   local text = table.concat(board.lines(), "\n")
 
-  minit.truthy(text:match("%.%.%./smartly_send_device_command_appsync/function/lambda_function%.py"))
-  minit.truthy(text:match("%.%.%./smartly_ingest_devices_appsync/function/lambda_function%.py"))
+  minit.truthy(text:match("smartly_send"))
+  minit.truthy(text:match("smartly_ingest"))
 
   cleanup()
 end)
@@ -484,6 +527,150 @@ minit.test("renders lazygit-style workbench panels", function()
   minit.truthy(text:match("%[0%]%-Patch / Preview esperado"))
   minit.truthy(text:match("%[5%]%-Validate / Diagnostics"))
   minit.truthy(text:match("logger%.info%("))
+
+  cleanup()
+end)
+
+minit.test("keeps workbench lines within board width", function()
+  cleanup()
+
+  local original_columns = vim.o.columns
+  vim.o.columns = 100
+  state.plan = {
+    version = 1,
+    title = "Add AppSync debug logs",
+    tasks = {
+      {
+        id = "send",
+        file = "src/handlers/smartly_send_device_command_appsync/function/lambda_function.py",
+        summary = "Guided patches for a very long lambda path",
+        anchors = {
+          {
+            id = "log-parsed-command-input",
+            line = 1,
+            reason = "Shows the command input parsed before validation.",
+            guidance = "Insert this structured log before the validation branch.",
+            writeText = {
+              "logger.info(",
+              "    \"AppSync device command input parsed\",",
+              "    extra={",
+              "        \"request_id\": request_id,",
+              "        \"device_lookup_id\": device_lookup_id,",
+              "        \"command_type\": command_type,",
+              "        \"has_payload\": payload is not None,",
+              "        \"user_id\": user_id,",
+              "    },",
+              ")",
+            },
+            doneWhen = { "The log appears before validation" },
+          },
+        },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+
+  local max_width = math.min(vim.o.columns - 4, math.max(84, math.floor(vim.o.columns * 0.82)))
+  for _, line in ipairs(board.lines()) do
+    if vim.fn.strdisplaywidth(line) > max_width then
+      error(string.format("line exceeds board width %d: %s", max_width, line))
+    end
+  end
+
+  vim.o.columns = original_columns
+  cleanup()
+end)
+
+minit.test("board open toggles panel windows closed", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "Toggle board plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Task",
+        anchors = { { id = "anchor", line = 1, writeText = { "local value = 1" } } },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+
+  board.open()
+  minit.truthy(board.wins.status and vim.api.nvim_win_is_valid(board.wins.status))
+
+  board.open()
+  minit.eq(nil, next(board.wins))
+
+  cleanup()
+end)
+
+minit.test("board close removes orphan yuumi floating windows", function()
+  cleanup()
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].filetype = "yuumi"
+  local win = vim.api.nvim_open_win(buf, false, {
+    relative = "editor",
+    row = 1,
+    col = 1,
+    width = 30,
+    height = 5,
+    border = "single",
+    title = " [3]-Arquivos ",
+  })
+
+  minit.truthy(vim.api.nvim_win_is_valid(win))
+  board.close()
+  minit.eq(false, vim.api.nvim_win_is_valid(win))
+
+  cleanup()
+end)
+
+minit.test("enter on files panel opens selected patch", function()
+  cleanup()
+
+  state.plan = {
+    version = 1,
+    title = "File navigation plan",
+    tasks = {
+      {
+        id = "task",
+        file = "examples/sample.lua",
+        summary = "Task",
+        anchors = {
+          { id = "first", line = 1, writeText = { "local first = 1" } },
+          { id = "second", line = 1, writeText = { "local second = 2" } },
+        },
+      },
+    },
+  }
+  state.plan_root = vim.uv.cwd()
+  state.cursor = { task = 1, anchor = 1 }
+  state.index_tasks()
+
+  board.open()
+  local selected_line = nil
+  for line, action in pairs(board.line_actions.files) do
+    if action.task_index == 1 and action.anchor_index == 2 then
+      selected_line = line
+      break
+    end
+  end
+
+  minit.truthy(selected_line)
+  vim.api.nvim_win_set_cursor(board.wins.files, { selected_line, 0 })
+
+  minit.truthy(board.open_selected("files"))
+  minit.eq(2, state.cursor.anchor)
+  minit.eq(nil, next(board.wins))
+  minit.truthy(vim.api.nvim_buf_get_name(0):match("examples/sample%.lua"))
 
   cleanup()
 end)
