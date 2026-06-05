@@ -636,6 +636,17 @@ minit.test("board close removes orphan yuumi floating windows", function()
   cleanup()
 end)
 
+minit.test("board refresh does not open closed board", function()
+  cleanup()
+  minit.truthy(plan.load(".agent/test-plan.json"))
+
+  board.refresh()
+
+  minit.eq(nil, next(board.wins))
+
+  cleanup()
+end)
+
 minit.test("board open closes orphan Yuumi Plan sidebar splits", function()
   cleanup()
 

@@ -110,7 +110,9 @@ local function open_panel(name, title, lines, config, actions)
     vim.bo[buf].filetype = "yuumi"
   end
 
+  vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].modifiable = false
   apply_highlights(buf)
   M.line_actions[name] = actions or {}
 
@@ -240,7 +242,7 @@ function M.toggle_zoom()
 end
 
 function M.refresh()
-  if state.plan then
+  if state.plan and has_open_panel() then
     M.open({ force = true })
   end
 end
