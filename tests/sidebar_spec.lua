@@ -77,3 +77,19 @@ minit.test("YuumiBoard command toggles sidebar split", function()
 
   cleanup()
 end)
+
+minit.test("YuumiBoard command closes legacy floating board panels", function()
+  cleanup()
+  setup_plan()
+  commands.create()
+
+  board.open()
+  minit.truthy(board.wins.status and vim.api.nvim_win_is_valid(board.wins.status))
+
+  vim.cmd.YuumiBoard()
+
+  minit.eq(nil, next(board.wins))
+  minit.truthy(sidebar.is_open())
+
+  cleanup()
+end)

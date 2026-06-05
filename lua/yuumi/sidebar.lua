@@ -40,6 +40,8 @@ function M.show()
     return
   end
 
+  board.close()
+
   if M.is_open() then
     M.refresh()
     return
@@ -75,6 +77,8 @@ function M.close()
 end
 
 function M.toggle()
+  board.close()
+
   if M.is_open() then
     M.hide()
   else
