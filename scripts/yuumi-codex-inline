@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-payload="$(</dev/stdin)"
+payload="$(cat)"
 
 prompt="You are Yuumi's inline completion adapter.
 
