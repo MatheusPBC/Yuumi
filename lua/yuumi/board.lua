@@ -96,7 +96,7 @@ function M.open_selected(panel_name)
   end
 
   M.close()
-  require("yuumi.nav").open(action.task_index, action.anchor_index, { open_board = false })
+  require("yuumi.nav").open(action.task_index, action.anchor_index, { refresh_ui = false })
   M.close()
   return true
 end

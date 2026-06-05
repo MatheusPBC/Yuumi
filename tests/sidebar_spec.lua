@@ -30,6 +30,17 @@ local function cleanup()
   vim.cmd("enew!")
 end
 
+local function unnamed_listed_count()
+  local count = 0
+  for _, buf in ipairs(vim.fn.getbufinfo({ buflisted = 1 })) do
+    if buf.name == "" then
+      count = count + 1
+    end
+  end
+
+  return count
+end
+
 minit.test("sidebar opens as persistent right split", function()
   cleanup()
   setup_plan()
@@ -59,6 +70,22 @@ minit.test("sidebar toggle hides without closing source window", function()
 
   minit.eq(false, sidebar.is_open())
   minit.eq(true, vim.api.nvim_win_is_valid(source_win))
+
+  cleanup()
+end)
+
+minit.test("sidebar does not leak unnamed listed buffers", function()
+  cleanup()
+  setup_plan()
+  vim.cmd.edit(vim.uv.cwd() .. "/examples/sample.lua")
+  local before = unnamed_listed_count()
+
+  sidebar.show()
+  sidebar.hide()
+  sidebar.show()
+  sidebar.hide()
+
+  minit.eq(before, unnamed_listed_count())
 
   cleanup()
 end)

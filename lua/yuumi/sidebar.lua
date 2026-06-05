@@ -84,7 +84,7 @@ function M.show()
     M.buf = vim.api.nvim_create_buf(false, true)
   end
 
-  vim.cmd("botright vertical new")
+  vim.cmd("botright vertical split")
   M.win = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(M.win, M.buf)
   vim.api.nvim_win_set_width(M.win, math.min(48, math.max(32, math.floor(vim.o.columns * 0.24))))
