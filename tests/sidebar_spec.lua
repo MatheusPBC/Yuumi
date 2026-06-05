@@ -90,22 +90,36 @@ minit.test("sidebar does not leak unnamed listed buffers", function()
   cleanup()
 end)
 
-minit.test("YuumiBoard command toggles sidebar split", function()
+minit.test("YuumiBoard command toggles floating board", function()
   cleanup()
   setup_plan()
   commands.create()
 
   vim.cmd.YuumiBoard()
+  minit.truthy(board.wins.status and vim.api.nvim_win_is_valid(board.wins.status))
+
+  vim.cmd.YuumiBoard()
+  minit.eq(nil, next(board.wins))
+
+  cleanup()
+end)
+
+minit.test("YuumiSidebar command toggles sidebar split", function()
+  cleanup()
+  setup_plan()
+  commands.create()
+
+  vim.cmd.YuumiSidebar()
   minit.truthy(sidebar.is_open())
   minit.eq("", vim.api.nvim_win_get_config(sidebar.win).relative)
 
-  vim.cmd.YuumiBoard()
+  vim.cmd.YuumiSidebar()
   minit.eq(false, sidebar.is_open())
 
   cleanup()
 end)
 
-minit.test("YuumiBoard command closes legacy floating board panels", function()
+minit.test("YuumiSidebar command closes legacy floating board panels", function()
   cleanup()
   setup_plan()
   commands.create()
@@ -113,7 +127,7 @@ minit.test("YuumiBoard command closes legacy floating board panels", function()
   board.open()
   minit.truthy(board.wins.status and vim.api.nvim_win_is_valid(board.wins.status))
 
-  vim.cmd.YuumiBoard()
+  vim.cmd.YuumiSidebar()
 
   minit.eq(nil, next(board.wins))
   minit.truthy(sidebar.is_open())
@@ -121,7 +135,7 @@ minit.test("YuumiBoard command closes legacy floating board panels", function()
   cleanup()
 end)
 
-minit.test("YuumiBoard command closes orphan sidebar splits", function()
+minit.test("YuumiSidebar command closes orphan sidebar splits", function()
   cleanup()
   setup_plan()
   commands.create()
@@ -135,7 +149,7 @@ minit.test("YuumiBoard command closes orphan sidebar splits", function()
 
   minit.truthy(vim.api.nvim_win_is_valid(orphan_win))
 
-  vim.cmd.YuumiBoard()
+  vim.cmd.YuumiSidebar()
 
   minit.eq(false, vim.api.nvim_win_is_valid(orphan_win))
   minit.truthy(sidebar.is_open())

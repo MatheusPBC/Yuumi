@@ -103,8 +103,9 @@ To check your progress:
 | `:YuumiPlans` | Pick and load a plan JSON from `.agent/plans` or `.agent`. |
 | `:YuumiFiles` | Pick a target file from the currently loaded plan. |
 | `:YuumiNext` / `:YuumiPrev` | Navigate through anchors. |
-| `:YuumiBoard` | Toggle the persistent Yuumi sidebar. |
-| `:YuumiBoardZoom` | Legacy float-board zoom helper. |
+| `:YuumiBoard` | Toggle the floating Yuumi board. |
+| `:YuumiSidebar` | Toggle the optional persistent right sidebar. |
+| `:YuumiBoardZoom` | Toggle floating board zoom. |
 | `:YuumiHover` | Show guidance for the current anchor. |
 | `:YuumiStatus` | Show current plan progress. |
 | `:YuumiValidate` | Validate current buffer against active anchor `writeText`. |
@@ -302,10 +303,10 @@ Legacy v1 fields:
 | `inlineSuggestions` | Optional trigger-based deterministic hints. |
 | `anchorText` / `beforeText` / `afterText` | Deterministic reanchor hints when line numbers drift. |
 
-## Guidance Sidebar
+## Guidance Board
 
-`:YuumiBoard` toggles a persistent right split. It keeps the source window
-visible and shows:
+`:YuumiBoard` toggles the floating multi-panel board. Use it when you want to
+show/hide the execution guide without keeping a permanent split open. It shows:
 
 - plan title and progress summary
 - `Arquivos`: target files, compact paths, patch counts, and anchor status
@@ -317,9 +318,11 @@ visible and shows:
 - `Plano`: execution queue with the current patch and next pending patches
 - `AI Review`: latest AI check result for the active patch
 
-The main buffer only shows a compact `patch aqui` marker. The sidebar is meant to
-be the execution guide, while the developer still types or accepts code
-manually.
+The main buffer only shows a compact `patch aqui` marker. The board is meant to
+be the execution guide, while the developer still types or accepts code manually.
+
+`:YuumiSidebar` is available as an optional persistent right split if you prefer
+a docked view.
 
 Status labels are highlighted by state: pending, done, stale, and skipped.
 

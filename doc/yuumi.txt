@@ -49,15 +49,19 @@ COMMANDS                                                *yuumi-commands*
 
                                                         *:YuumiBoard*
 :YuumiBoard
-  Toggle a persistent right-side guidance sidebar. The sidebar lists plan files,
+  Toggle the floating multi-panel guidance board. The board lists plan files,
   progress, current status, explanation, expected code, AI Review, and done
   criteria for the active patch. Its main sections are Arquivos, Patch atual,
   Por que, Fazer, Codigo esperado, Checklist, AI Review, and Plano. Status
   labels are highlighted by state: pending, done, stale, and skipped.
 
+                                                        *:YuumiSidebar*
+:YuumiSidebar
+  Toggle the optional persistent right-side guidance sidebar.
+
                                                         *:YuumiBoardZoom*
 :YuumiBoardZoom
-  Legacy float-board zoom helper.
+  Toggle floating board zoom.
 
                                                         *:YuumiFiles*
 :YuumiFiles

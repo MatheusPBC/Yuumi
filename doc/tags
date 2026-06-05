@@ -11,6 +11,7 @@
 :YuumiPrev	yuumi.txt	/*:YuumiPrev*
 :YuumiReanchor	yuumi.txt	/*:YuumiReanchor*
 :YuumiResetState	yuumi.txt	/*:YuumiResetState*
+:YuumiSidebar	yuumi.txt	/*:YuumiSidebar*
 :YuumiSkip	yuumi.txt	/*:YuumiSkip*
 :YuumiStatus	yuumi.txt	/*:YuumiStatus*
 :YuumiValidate	yuumi.txt	/*:YuumiValidate*
